@@ -1,0 +1,23 @@
+# gitignore for comfy-desk
+.env
+volumes/
+*.ckpt
+*.safetensors
+*.pt
+*.pth
+__pycache__/
+*.pyc
+.DS_Store
+frontend/.next/
+frontend/node_modules/
+logs/
+lora_output/
+*.log
+
+# Ignore large directories and virtual environments
+.venv/
+ComfyUI/
+comfy-ui/
+.vscode/
+.draft/
+.codex

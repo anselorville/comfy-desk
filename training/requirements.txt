@@ -1,0 +1,8 @@
+# training/requirements.txt
+# 用于数据集准备脚本 (prepare_dataset.py, resize_images.py, verify_dataset.py)
+# 安装方法：pip install -r training/requirements.txt
+
+httpx>=0.28.0          # 异步 HTTP 客户端（调用 ComfyDesk API）
+pillow>=11.0.0          # 图片处理（resize、格式转换）
+tqdm>=4.60.0            # 进度条
+aiofiles>=24.0.0        # 异步文件写入

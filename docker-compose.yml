@@ -1,0 +1,148 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ComfyDesk — Docker Compose
+# Services: nginx | gateway (FastAPI) | comfyui | joycaption (vLLM)
+# GPU: single RTX 2080 Ti 22 GB
+#
+# JoyCaption and ComfyUI share the GPU via time-slicing by default.
+# To prioritise one service at a time, bring the other down temporarily:
+#   docker compose stop comfyui   # while captioning
+#   docker compose stop joycaption # while generating
+# ──────────────────────────────────────────────────────────────────────────────
+
+networks:
+  comfy_net:
+    driver: bridge
+
+volumes:
+  comfyui_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${COMFYUI_MODELS_DIR:-./volumes/models}
+  comfyui_output:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${COMFYUI_OUTPUT_DIR:-./volumes/output}
+  hf_cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HF_CACHE_DIR:-./volumes/hf_cache}
+  dataset:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATASET_DIR:-./volumes/dataset}
+
+services:
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: comfydesk_nginx
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+      - frontend
+    networks:
+      - comfy_net
+    restart: unless-stopped
+
+  # ── Next.js Frontend ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: comfydesk_frontend
+    environment:
+      - NEXT_PUBLIC_API_BASE=/api/v1
+      - OUTPUT_DIR=/app/output/comfydesk
+    volumes:
+      - comfyui_output:/app/output:ro
+    networks:
+      - comfy_net
+    restart: unless-stopped
+
+  # ── API Gateway (FastAPI) ──────────────────────────────────────────────────
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: comfydesk_gateway
+    env_file: .env
+    environment:
+      - COMFYUI_URL=http://comfyui:8188
+      - JOYCAPTION_URL=http://joycaption:8000
+      - OUTPUT_DIR=/app/output
+    volumes:
+      - comfyui_output:/app/output:ro
+    depends_on:
+      - comfyui
+      - joycaption
+    networks:
+      - comfy_net
+    restart: unless-stopped
+
+  # ── ComfyUI ────────────────────────────────────────────────────────────────
+  comfyui:
+    image: ghcr.io/ai-dock/comfyui:latest-cuda
+    container_name: comfydesk_comfyui
+    environment:
+      - CLI_ARGS=--listen 0.0.0.0 --port 8188 --disable-auto-launch
+    volumes:
+      - comfyui_models:/opt/ComfyUI/models
+      - comfyui_output:/opt/ComfyUI/output
+      - ./comfyui/custom_nodes:/opt/ComfyUI/custom_nodes
+      - ./comfyui/workflows:/opt/ComfyUI/user/default/workflows
+    ports:
+      - "${COMFYUI_PORT:-8188}:8188"  # expose for direct access during dev
+    networks:
+      - comfy_net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # ── JoyCaption via vLLM ────────────────────────────────────────────────────
+  joycaption:
+    image: vllm/vllm-openai:latest
+    container_name: comfydesk_joycaption
+    command: >
+      --model fancyfeast/llama-joycaption-beta-one-hf-llava
+      --max-model-len 4096
+      --enable-prefix-caching
+      --gpu-memory-utilization 0.45
+      --port 8000
+    environment:
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "${JOYCAPTION_PORT:-9001}:8000"  # expose for direct CLI testing
+    networks:
+      - comfy_net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    # NOTE: JoyCaption takes ~10GB VRAM. ComfyUI uses ~8-12GB for SDXL.
+    # Both fit in 22GB but margin is tight. If OOM, stop one service.
+    shm_size: "8gb"
+    ipc: host
