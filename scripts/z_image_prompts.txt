@@ -1,0 +1,22 @@
+# One prompt per line. Blank lines and lines beginning with # are ignored.
+# Replace these with your 20 character/person prompts.
+Latina female with thick wavy hair, harbor boats and pastel houses behind, breezy seaside light, warm tones, cinematic close-up
+Young cyberpunk courier with short silver hair, neon street market at night, rain on jacket, expressive portrait, cinematic lighting
+Elegant elderly woman with silver braided hair, greenhouse full of orchids, soft morning light, detailed face, warm realistic portrait
+Martial arts heroine in modern streetwear, rooftop at sunset, wind moving her ponytail, confident pose, dramatic rim light
+Soft-spoken male librarian with round glasses, old wooden library shelves behind, amber lamp light, thoughtful close-up portrait
+Futuristic medic with teal tactical jacket, clean sci-fi clinic background, calm expression, detailed character portrait
+Desert explorer woman with sun scarf and freckles, sandstone canyon behind, golden hour, cinematic realistic portrait
+Young violinist in black formal coat, rainy city window behind, moody blue light, delicate emotional portrait
+Athletic woman with braided hair and boxing wraps, old gym background, sweat and dust, strong cinematic portrait
+Fantasy botanist with curly auburn hair, glowing plants around her, gentle expression, magical realism portrait
+Street photographer with messy hair and vintage camera, crowded Tokyo crosswalk behind, natural documentary portrait
+Royal guard woman in ornate red armor, palace corridor behind, stern gaze, high-detail cinematic character portrait
+Calm sailor man with weathered face, stormy sea behind, navy coat, dramatic natural light, realistic portrait
+Young fashion designer with asymmetrical haircut, studio mannequins behind, colorful fabrics, editorial portrait
+Mountain ranger woman with green jacket, pine forest and mist behind, clear eyes, rugged realistic portrait
+Jazz singer in velvet suit, smoky club stage behind, spotlight, expressive close-up portrait
+Inventor girl with goggles and oil-stained hands, workshop full of brass tools, warm practical lights, whimsical portrait
+Urban dancer with shaved side hairstyle, subway platform behind, motion energy, cinematic street portrait
+Mysterious detective woman in trench coat, foggy alley background, noir lighting, sharp realistic portrait
+Kind village healer with long black hair, herb bundles and clay jars behind, soft daylight, peaceful portrait

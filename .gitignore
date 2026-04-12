@@ -12,6 +12,7 @@ frontend/.next/
 frontend/node_modules/
 logs/
 lora_output/
+outputs/
 *.log
 
 # Ignore large directories and virtual environments
