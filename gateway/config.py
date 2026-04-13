@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     output_dir: str = "/app/output"
     gateway_api_key: str = ""              # empty = auth disabled
     joycaption_model: str = "fancyfeast/llama-joycaption-beta-one-hf-llava"
+    dataset_dir: str = "/app/dataset"
 
     class Config:
         env_file = ".env"

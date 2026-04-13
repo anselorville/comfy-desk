@@ -108,3 +108,51 @@ export async function waitForTask(
     });
   });
 }
+
+// ── Dataset & Training APIs ────────────────────────────────────────────────────
+
+export interface DatasetImage {
+  id: string;
+  filename: string;
+  has_caption: boolean;
+  size: number;
+}
+
+export async function fetchDatasetImages(): Promise<DatasetImage[]> {
+  const res = await fetch(`${API_BASE}/dataset/images`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function fetchCaption(id: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/dataset/images/${id}/caption`);
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()).caption;
+}
+
+export async function updateCaption(id: string, caption: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/dataset/images/${id}/caption`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caption }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function startBatchCaption(imageIds: string[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/dataset/caption-batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_ids: imageIds }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function startTraining(epochLimit: number, learningRate: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/training/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ epoch_limit: epochLimit, learning_rate: learningRate }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

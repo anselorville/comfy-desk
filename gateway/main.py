@@ -18,6 +18,8 @@ from api.tasks import router as tasks_router
 from api.caption import router as caption_router
 from api.workflows import router as workflows_router
 from api.system import router as system_router
+from api.dataset import router as dataset_router
+from api.training import router as training_router
 from config import settings
 
 app = FastAPI(
@@ -42,6 +44,8 @@ app.include_router(tasks_router,    prefix="/api/v1", tags=["Tasks"])
 app.include_router(caption_router,  prefix="/api/v1", tags=["Caption"])
 app.include_router(workflows_router, prefix="/api/v1", tags=["Workflows"])
 app.include_router(system_router, prefix="/api/v1", tags=["System"])
+app.include_router(dataset_router, prefix="/api/v1", tags=["Dataset"])
+app.include_router(training_router, prefix="/api/v1", tags=["Training"])
 
 
 @app.get("/api/health", tags=["System"])
