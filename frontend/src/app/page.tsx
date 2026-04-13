@@ -1,31 +1,25 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   generate,
   waitForTask,
   listWorkflows,
   type TaskResponse,
+  type WorkflowMeta,
 } from "@/lib/api";
 
-const PRESETS = [
-  { label: "SDXL", value: "txt2img_sdxl" },
-  { label: "Flux.1", value: "txt2img_flux" },
-];
-
 const ASPECT_RATIOS = [
-  { label: "1:1 (1024)", w: 1024, h: 1024 },
-  { label: "3:4 (768×1024)", w: 768, h: 1024 },
-  { label: "4:3 (1024×768)", w: 1024, h: 768 },
-  { label: "16:9 (1280×720)", w: 1280, h: 720 },
-  { label: "9:16 (720×1280)", w: 720, h: 1280 },
+  { label: "1:1", w: 1024, h: 1024 },
+  { label: "3:4", w: 768, h: 1024 },
+  { label: "4:3", w: 1024, h: 768 },
+  { label: "16:9", w: 1280, h: 720 },
+  { label: "9:16", w: 720, h: 1280 },
 ];
 
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
-  const [negPrompt, setNegPrompt] = useState(
-    "blurry, low quality, watermark, text, signature"
-  );
+  const [negPrompt, setNegPrompt] = useState("blurry, low quality, watermark, text, signature");
   const [workflow, setWorkflow] = useState("txt2img_sdxl");
   const [steps, setSteps] = useState(28);
   const [cfg, setCfg] = useState(7);
@@ -36,6 +30,11 @@ export default function GeneratePage() {
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [resultImages, setResultImages] = useState<string[]>([]);
+  const [workflows, setWorkflows] = useState<WorkflowMeta[]>([]);
+
+  useEffect(() => {
+    listWorkflows().then(setWorkflows).catch(console.error);
+  }, []);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -75,392 +74,252 @@ export default function GeneratePage() {
   const status = task?.status ?? "idle";
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "2rem",
-        }}
-        className="generate-grid"
-      >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
         {/* ── Left panel: Controls ─────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              background: "linear-gradient(135deg, #f1f1f6, #a855f7)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            文本生成图片
-          </h1>
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          <div className="mb-2">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              AI 创作工作站
+            </h1>
+            <p className="mt-2 text-slate-500 text-sm font-medium">
+              输入您的创意，开始生成高品质 AI 图像。
+            </p>
+          </div>
 
           {/* Prompt */}
-          <Card>
-            <Label>正向提示词</Label>
-            <textarea
-              id="prompt-input"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="a stunning portrait of a woman in a garden, golden hour, bokeh, photorealistic..."
-              rows={4}
-              style={textareaStyle}
-            />
-            <Label style={{ marginTop: "0.75rem" }}>负向提示词</Label>
-            <textarea
-              id="neg-prompt-input"
-              value={negPrompt}
-              onChange={(e) => setNegPrompt(e.target.value)}
-              rows={2}
-              style={{ ...textareaStyle, opacity: 0.75 }}
-            />
-          </Card>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                正向提示词
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="一个宁静的花园，金色的阳光，电影感散景..."
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                负向提示词
+              </label>
+              <textarea
+                value={negPrompt}
+                onChange={(e) => setNegPrompt(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+              />
+            </div>
+          </div>
 
-          {/* Workflow */}
-          <Card>
-            <Label>生成模型</Label>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {PRESETS.map((p) => (
-                <button
-                  key={p.value}
-                  id={`workflow-${p.value}`}
-                  onClick={() => setWorkflow(p.value)}
-                  style={chipBtn(workflow === p.value)}
-                >
-                  {p.label}
-                </button>
-              ))}
+          {/* Workflow & Aspect */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-6">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                模型选择
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {workflows.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setWorkflow(p.id)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+                      workflow === p.id
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <Label style={{ marginTop: "1rem" }}>画幅比例</Label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {ASPECT_RATIOS.map((a, i) => (
-                <button
-                  key={a.label}
-                  id={`aspect-${i}`}
-                  onClick={() => setAspectIdx(i)}
-                  style={chipBtn(aspectIdx === i)}
-                >
-                  {a.label}
-                </button>
-              ))}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                画幅比例
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {ASPECT_RATIOS.map((a, i) => (
+                  <button
+                    key={a.label}
+                    onClick={() => setAspectIdx(i)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+                      aspectIdx === i
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
 
           {/* Parameters */}
-          <Card>
-            <Label>采样步数：{steps}</Label>
-            <input
-              id="steps-slider"
-              type="range"
-              min={10}
-              max={100}
-              value={steps}
-              onChange={(e) => setSteps(+e.target.value)}
-              style={sliderStyle}
-            />
-            <Label style={{ marginTop: "0.75rem" }}>引导系数(CFG)：{cfg.toFixed(1)}</Label>
-            <input
-              id="cfg-slider"
-              type="range"
-              min={1}
-              max={20}
-              step={0.5}
-              value={cfg}
-              onChange={(e) => setCfg(+e.target.value)}
-              style={sliderStyle}
-            />
-            <Label style={{ marginTop: "0.75rem" }}>Seed：</Label>
-            <input
-              id="seed-input"
-              type="number"
-              value={seed}
-              onChange={(e) => setSeed(+e.target.value)}
-              placeholder="-1 (随机)"
-              style={inputStyle}
-            />
-          </Card>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  步数 (Steps)
+                </label>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                  {steps}
+                </span>
+              </div>
+              <input
+                type="range" min={10} max={100} value={steps}
+                onChange={(e) => setSteps(+e.target.value)}
+                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  CFG 指导
+                </label>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                  {cfg.toFixed(1)}
+                </span>
+              </div>
+              <input
+                type="range" min={1} max={20} step={0.5} value={cfg}
+                onChange={(e) => setCfg(+e.target.value)}
+                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Seed
+              </label>
+              <input
+                type="number" value={seed}
+                onChange={(e) => setSeed(+e.target.value)}
+                placeholder="-1 (随机)"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
+              />
+            </div>
+          </div>
 
           {/* LoRA */}
-          <Card>
-            <Label>LoRA（可选）</Label>
-            <input
-              id="lora-input"
-              type="text"
-              value={lora}
-              onChange={(e) => setLora(e.target.value)}
-              placeholder="my_lora（不含扩展名）"
-              style={inputStyle}
-            />
-            <Label style={{ marginTop: "0.75rem" }}>LoRA 强度：{loraStrength.toFixed(2)}</Label>
-            <input
-              id="lora-strength-slider"
-              type="range"
-              min={0}
-              max={2}
-              step={0.05}
-              value={loraStrength}
-              onChange={(e) => setLoraStrength(+e.target.value)}
-              style={sliderStyle}
-            />
-          </Card>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                LoRA 模型名
+              </label>
+              <input
+                type="text" value={lora}
+                onChange={(e) => setLora(e.target.value)}
+                placeholder="例如: anime_style"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  LoRA 权重
+                </label>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                  {loraStrength.toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range" min={0} max={2} step={0.05} value={loraStrength}
+                onChange={(e) => setLoraStrength(+e.target.value)}
+                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+          </div>
 
-          {/* Generate button */}
           <button
-            id="generate-btn"
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
-            style={{
-              padding: "0.875rem",
-              borderRadius: 12,
-              border: "none",
-              cursor: loading || !prompt.trim() ? "not-allowed" : "pointer",
-              fontSize: "1rem",
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-              background:
-                loading || !prompt.trim()
-                  ? "rgba(124,58,237,0.3)"
-                  : "linear-gradient(135deg, #7c3aed, #a855f7)",
-              color: "#fff",
-              opacity: loading || !prompt.trim() ? 0.6 : 1,
-              transition: "all 0.2s ease",
-              boxShadow: loading || !prompt.trim()
-                ? "none"
-                : "0 0 30px rgba(124,58,237,0.4)",
-            }}
+            className={`w-full py-4 rounded-2xl text-sm font-black tracking-widest uppercase transition-all shadow-md active:scale-[0.98] ${
+              loading || !prompt.trim()
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
+            }`}
           >
-            {loading ? "⏳ 生成中..." : "✦ 开始生成"}
+            {loading ? "⌛ 处理中..." : "✦ 立即生成"}
           </button>
         </div>
 
         {/* ── Right panel: Output ─────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "1.5rem",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-            }}
-          >
-            输出结果
-          </h2>
-
-          {/* Progress */}
-          {loading && (
-            <Card>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
-                  {status === "running" ? "渲染中..." : "排队中..."}
-                </span>
-                <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#a855f7" }}>
-                  {progress}%
-                </span>
+        <div className="lg:col-span-7 flex flex-col gap-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900">创作画布</h2>
+            {loading && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest">{status === "running" ? "渲染中" : "入队中"}</span>
               </div>
-              <div
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  background: "var(--border)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${progress}%`,
-                    background: "linear-gradient(90deg, #7c3aed, #a855f7)",
-                    transition: "width 0.4s ease",
-                    borderRadius: 3,
-                  }}
-                />
-              </div>
-            </Card>
-          )}
+            )}
+          </div>
 
-          {/* Result images */}
-          {resultImages.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {resultImages.map((src, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 0 40px rgba(124,58,237,0.2)",
-                    position: "relative",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt={`Generated ${idx + 1}`}
-                    id={`result-image-${idx}`}
-                    style={{ width: "100%", display: "block" }}
-                  />
-                  <a
-                    href={src}
-                    download
-                    style={{
-                      position: "absolute",
-                      bottom: 12,
-                      right: 12,
-                      padding: "0.4rem 0.875rem",
-                      borderRadius: 8,
-                      background: "rgba(0,0,0,0.7)",
-                      backdropFilter: "blur(8px)",
-                      color: "#fff",
-                      textDecoration: "none",
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                      border: "1px solid rgba(255,255,255,0.15)",
-                    }}
-                  >
-                    ↓ 下载
-                  </a>
+          {/* Output Card */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm min-h-[600px] flex flex-col relative overflow-hidden">
+            {loading && (
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-50 overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            )}
+
+            {resultImages.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[800px] pr-2">
+                {resultImages.map((src, idx) => (
+                  <div key={idx} className="group relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition-all hover:shadow-xl">
+                    <img src={src} alt="Generated" className="w-full block" />
+                    <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={src} download
+                        className="px-4 py-2 bg-white/90 backdrop-blur text-indigo-700 text-xs font-black rounded-xl shadow-lg border border-white hover:bg-white transition-colors uppercase tracking-widest"
+                      >
+                        下载
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : !loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-slate-300">
+                <div className="w-20 h-20 rounded-full border-4 border-slate-50 flex items-center justify-center text-4xl">
+                  ✦
                 </div>
-              ))}
-            </div>
-          ) : !loading ? (
-            <div
-              style={{
-                flex: 1,
-                minHeight: 400,
-                borderRadius: 16,
-                border: "2px dashed var(--border)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "1rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              <span style={{ fontSize: "3rem", opacity: 0.3 }}>✦</span>
-              <p style={{ margin: 0, fontSize: "0.875rem" }}>
-                在左侧输入提示词，点击开始生成
-              </p>
-            </div>
-          ) : null}
+                <p className="text-sm font-semibold tracking-wide text-slate-400">
+                  准备就绪，尽情挥洒创意
+                </p>
+              </div>
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-6">
+                    <div className="relative">
+                        <div className="w-24 h-24 border-8 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center font-black text-indigo-600">
+                            {progress}%
+                        </div>
+                    </div>
+                    <p className="text-sm font-black text-indigo-600 animate-pulse tracking-widest uppercase">图像合成中</p>
+                </div>
+            )}
 
-          {task?.error && (
-            <Card>
-              <p style={{ margin: 0, color: "var(--error)", fontSize: "0.875rem" }}>
-                ❌ 生成失败：{task.error}
-              </p>
-            </Card>
-          )}
+            {task?.error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                <span className="text-red-500 text-lg">⚠️</span>
+                <div>
+                    <h4 className="text-xs font-black text-red-700 uppercase tracking-widest">错误详情</h4>
+                    <p className="text-xs text-red-600 mt-1">{task.error}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .generate-grid { grid-template-columns: 1fr !important; }
-        }
-        input[type=range] { accent-color: #7c3aed; }
-      `}</style>
     </div>
   );
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 16,
-        padding: "1.25rem",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Label({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <p
-      style={{
-        margin: "0 0 0.4rem",
-        fontSize: "0.8rem",
-        fontWeight: 600,
-        color: "var(--text-muted)",
-        textTransform: "uppercase",
-        letterSpacing: "0.05em",
-        ...style,
-      }}
-    >
-      {children}
-    </p>
-  );
-}
-
-const textareaStyle: React.CSSProperties = {
-  width: "100%",
-  background: "var(--bg-surface)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "0.75rem",
-  color: "var(--text-primary)",
-  fontSize: "0.9rem",
-  lineHeight: 1.6,
-  resize: "vertical",
-  fontFamily: "inherit",
-  outline: "none",
-  transition: "border-color 0.15s",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  background: "var(--bg-surface)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "0.6rem 0.75rem",
-  color: "var(--text-primary)",
-  fontSize: "0.9rem",
-  fontFamily: "inherit",
-  outline: "none",
-};
-
-const sliderStyle: React.CSSProperties = {
-  width: "100%",
-  cursor: "pointer",
-};
-
-function chipBtn(active: boolean): React.CSSProperties {
-  return {
-    padding: "0.35rem 0.875rem",
-    borderRadius: 8,
-    border: active
-      ? "1px solid rgba(124,58,237,0.5)"
-      : "1px solid var(--border)",
-    background: active ? "rgba(124,58,237,0.2)" : "var(--bg-surface)",
-    color: active ? "#a855f7" : "var(--text-muted)",
-    fontSize: "0.85rem",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-  };
 }
