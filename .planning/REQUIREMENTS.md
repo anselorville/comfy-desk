@@ -54,27 +54,27 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GEN-01 | | Pending |
-| GEN-02 | | Pending |
-| GEN-03 | | Pending |
-| GEN-04 | | Pending |
-| GEN-05 | | Pending |
-| TRAIN-01 | | Pending |
-| TRAIN-02 | | Pending |
-| TRAIN-03 | | Pending |
-| TRAIN-04 | | Pending |
-| TRAIN-05 | | Pending |
-| TRAIN-06 | | Pending |
-| SYS-01 | | Pending |
-| SYS-02 | | Pending |
-| SYS-03 | | Pending |
-| SYS-04 | | Pending |
-| SYS-05 | | Pending |
+| GEN-01 | Phase 2 | Pending |
+| GEN-02 | Phase 2 | Pending |
+| GEN-03 | Phase 2 | Pending |
+| GEN-04 | Phase 2 | Pending |
+| GEN-05 | Phase 2 | Pending |
+| TRAIN-01 | Phase 3 | Pending |
+| TRAIN-02 | Phase 3 | Pending |
+| TRAIN-03 | Phase 3 | Pending |
+| TRAIN-04 | Phase 3 | Pending |
+| TRAIN-05 | Phase 3 | Pending |
+| TRAIN-06 | Phase 3 | Pending |
+| SYS-01 | Phase 1 | Pending |
+| SYS-02 | Phase 1 | Pending |
+| SYS-03 | Phase 1 | Pending |
+| SYS-04 | Phase 1 | Pending |
+| SYS-05 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-13*
