@@ -20,7 +20,7 @@ class TaskResponse(BaseModel):
 @router.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task_status(task_id: str):
     """Poll the status of a generation task."""
-    task = get_task(task_id)
+    task = await get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskResponse(

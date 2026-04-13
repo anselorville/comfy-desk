@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from services import comfy_client
 from services.task_store import create_task, update_task, TaskStatus
 from services.workflow_loader import load_workflow, inject_params
+from api.system import get_system_mode
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class GenerateRequest(BaseModel):
 async def _run_generation(task_id: str, request: GenerateRequest):
     client_id = str(uuid.uuid4())
     try:
-        update_task(task_id, status=TaskStatus.RUNNING, progress=10)
+        await update_task(task_id, status=TaskStatus.RUNNING, progress=10)
 
         # Build workflow params
         seed = request.seed if request.seed >= 0 else int(uuid.uuid4().int % 2**32)
@@ -52,22 +53,24 @@ async def _run_generation(task_id: str, request: GenerateRequest):
         wf = load_workflow(request.workflow)
         wf = inject_params(wf, params)
 
-        update_task(task_id, progress=20)
+        await update_task(task_id, progress=20)
 
         prompt_id = await comfy_client.queue_prompt(wf, client_id)
-        update_task(task_id, progress=30)
+        await update_task(task_id, progress=30)
 
         images = await comfy_client.wait_for_completion(prompt_id, client_id)
-        update_task(task_id, status=TaskStatus.DONE, progress=100, images=images)
+        await update_task(task_id, status=TaskStatus.DONE, progress=100, images=images)
 
     except Exception as exc:
         logger.exception("Generation task %s failed", task_id)
-        update_task(task_id, status=TaskStatus.FAILED, error=str(exc))
+        await update_task(task_id, status=TaskStatus.FAILED, error=str(exc))
 
 
 @router.post("/generate")
 async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
     """Submit a text-to-image generation task. Returns task_id for polling."""
-    task = create_task(**request.model_dump())
+    if get_system_mode() == "training":
+        raise HTTPException(status_code=409, detail="System is occupied by training")
+    task = await create_task(**request.model_dump())
     background_tasks.add_task(_run_generation, task.id, request)
     return {"task_id": task.id, "status": "pending"}

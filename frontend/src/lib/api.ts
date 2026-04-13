@@ -31,6 +31,16 @@ export interface CaptionResponse {
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
+export async function fetchSystemMode(): Promise<{ mode: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/system/mode`);
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } catch (e) {
+    return { mode: "idle" };
+  }
+}
+
 export async function generate(req: GenerateRequest): Promise<{ task_id: string }> {
   const res = await fetch(`${API_BASE}/generate`, {
     method: "POST",
