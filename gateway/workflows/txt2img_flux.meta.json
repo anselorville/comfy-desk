@@ -1,0 +1,11 @@
+{
+  "name": "Text to Image (Flux)",
+  "fields": [
+    {"name": "prompt", "type": "string", "label": "Prompt", "default": ""},
+    {"name": "steps", "type": "number", "label": "Steps", "default": 20},
+    {"name": "cfg", "type": "number", "label": "CFG Scale", "default": 7.0},
+    {"name": "width", "type": "number", "label": "Width", "default": 1024},
+    {"name": "height", "type": "number", "label": "Height", "default": 1024},
+    {"name": "seed", "type": "number", "label": "Seed", "default": -1}
+  ]
+}

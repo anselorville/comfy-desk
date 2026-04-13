@@ -72,7 +72,13 @@ export async function captionImage(
   return res.json();
 }
 
-export async function listWorkflows(): Promise<string[]> {
+export interface WorkflowMeta {
+  id: string;
+  name: string;
+  fields: { name: string; type: string; label: string; default: any }[];
+}
+
+export async function listWorkflows(): Promise<WorkflowMeta[]> {
   const res = await fetch(`${API_BASE}/workflows`);
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
@@ -82,22 +88,23 @@ export async function listWorkflows(): Promise<string[]> {
 /** Poll until done/failed, calling onProgress each tick. */
 export async function waitForTask(
   taskId: string,
-  onProgress: (t: TaskResponse) => void,
-  intervalMs = 1500
+  onProgress: (t: TaskResponse) => void
 ): Promise<TaskResponse> {
   return new Promise((resolve, reject) => {
-    const timer = setInterval(async () => {
+    const es = new EventSource(`${API_BASE}/tasks/${taskId}/stream`);
+    es.addEventListener("progress", (e) => {
       try {
-        const task = await pollTask(taskId);
+        const task: TaskResponse = JSON.parse(e.data);
         onProgress(task);
         if (task.status === "done" || task.status === "failed") {
-          clearInterval(timer);
+          es.close();
           resolve(task);
         }
-      } catch (err) {
-        clearInterval(timer);
-        reject(err);
-      }
-    }, intervalMs);
+      } catch (err) {}
+    });
+    es.addEventListener("error", (e) => {
+      es.close();
+      reject(new Error("Stream error"));
+    });
   });
 }

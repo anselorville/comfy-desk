@@ -13,6 +13,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from services.task_store import update_task
+
 import httpx
 import websockets
 
@@ -36,6 +38,7 @@ async def queue_prompt(workflow: dict[str, Any], client_id: str) -> str:
 async def wait_for_completion(
     prompt_id: str,
     client_id: str,
+    task_id: str = None,
     timeout: float = 300.0,
 ) -> list[str]:
     """
@@ -69,6 +72,16 @@ async def wait_for_completion(
                         for node_output in outputs.values():
                             for img in node_output.get("images", []):
                                 output_images.append(img["filename"])
+
+                elif mtype == "progress":
+                    data = msg.get("data", {})
+                    val = data.get("value", 0)
+                    max_val = data.get("max", 1)
+                    if task_id and max_val > 0:
+                        pct = 30 + int((val / max_val) * 70)
+                        if pct > 99:
+                            pct = 99
+                        await update_task(task_id, progress=pct)
 
     try:
         await asyncio.wait_for(_listen(), timeout=timeout)

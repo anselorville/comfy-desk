@@ -13,8 +13,25 @@ from typing import Any
 WORKFLOW_DIR = Path(__file__).parent.parent / "workflows"
 
 
-def list_workflows() -> list[str]:
-    return [p.stem for p in WORKFLOW_DIR.glob("*.json")]
+def list_workflows() -> list[dict[str, Any]]:
+    workflows = []
+    for p in WORKFLOW_DIR.glob("*.json"):
+        if p.name.endswith(".meta.json"):
+            continue
+        wf_id = p.stem
+        meta_path = WORKFLOW_DIR / f"{wf_id}.meta.json"
+        
+        meta = {"id": wf_id, "name": wf_id, "fields": []}
+        if meta_path.exists():
+            with open(meta_path) as mf:
+                try:
+                    meta_data = json.load(mf)
+                    meta["name"] = meta_data.get("name", wf_id)
+                    meta["fields"] = meta_data.get("fields", [])
+                except Exception:
+                    pass
+        workflows.append(meta)
+    return workflows
 
 
 def load_workflow(name: str) -> dict[str, Any]:

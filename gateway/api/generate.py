@@ -58,7 +58,7 @@ async def _run_generation(task_id: str, request: GenerateRequest):
         prompt_id = await comfy_client.queue_prompt(wf, client_id)
         await update_task(task_id, progress=30)
 
-        images = await comfy_client.wait_for_completion(prompt_id, client_id)
+        images = await comfy_client.wait_for_completion(prompt_id, client_id, task_id)
         await update_task(task_id, status=TaskStatus.DONE, progress=100, images=images)
 
     except Exception as exc:
