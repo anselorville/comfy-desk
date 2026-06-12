@@ -3,14 +3,14 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
-from api.system import get_system_mode, set_mode, SystemMode
+from api.system import get_system_mode, set_system_mode
 from collections import deque
 
 router = APIRouter()
 
 # Simple global string queue for training logs, capturing stdout
-TRAINING_LOGS = deque(maxlen=2000)
-TRAINING_PROCESS = None
+TRAINING_LOGS: deque[str] = deque(maxlen=2000)
+TRAINING_PROCESS: asyncio.subprocess.Process | None = None
 
 class TrainRequest(BaseModel):
     epoch_limit: int = 10
@@ -25,7 +25,7 @@ async def start_training(req: TrainRequest):
         raise HTTPException(status_code=409, detail="Training already running")
 
     # Change mode
-    set_mode(SystemMode(mode="training"))
+    set_system_mode("training")
     TRAINING_LOGS.clear()
     TRAINING_LOGS.append("[SYSTEM] Starting Kohya_ss LoRA Subprocess...")
     
@@ -42,20 +42,20 @@ async def start_training(req: TrainRequest):
         )
         
         # Start a background task to consume stdout into the ring buffer
-        async def _log_consumer(proc):
+        async def _log_consumer(proc: asyncio.subprocess.Process):
             while True:
-                line = await proc.stdout.readline()
+                line = await proc.stdout.readline()  # type: ignore[union-attr]
                 if not line:
                     break
                 TRAINING_LOGS.append(line.decode("utf-8").strip())
             await proc.wait()
-            set_mode(SystemMode(mode="idle"))
+            set_system_mode("idle")
             TRAINING_LOGS.append(f"[SYSTEM] Process Exited with {proc.returncode}")
         
         asyncio.create_task(_log_consumer(TRAINING_PROCESS))
     except Exception as e:
         TRAINING_LOGS.append(f"[ERROR] Failed to start subprocess: {e}")
-        set_mode(SystemMode(mode="idle"))
+        set_system_mode("idle")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"status": "started"}

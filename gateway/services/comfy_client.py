@@ -38,7 +38,7 @@ async def queue_prompt(workflow: dict[str, Any], client_id: str) -> str:
 async def wait_for_completion(
     prompt_id: str,
     client_id: str,
-    task_id: str = None,
+    task_id: str | None = None,
     timeout: float = 300.0,
 ) -> list[str]:
     """
