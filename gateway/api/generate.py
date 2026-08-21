@@ -37,6 +37,11 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
         run_generation_task,
         task.id,
         request.workflow,
-        {**request.model_dump(), "filename_prefix": f"comfydesk_{task.id[:8]}"},
+        {
+            **request.model_dump(),
+            "positive_prompt": request.prompt,
+            "negative_prompt": request.negative_prompt,
+            "filename_prefix": f"comfydesk_{task.id[:8]}",
+        },
     )
     return {"task_id": task.id, "status": "pending"}
