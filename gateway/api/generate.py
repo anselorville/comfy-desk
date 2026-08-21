@@ -26,6 +26,7 @@ class GenerateRequest(BaseModel):
     seed: int = Field(-1, description="-1 for random")
     lora: str = Field("", description="Optional LoRA filename (without extension)")
     lora_strength: float = Field(0.8, ge=0.0, le=2.0)
+    length: int = Field(121, ge=1, le=999, description="Video frames at 24fps (video workflows only)")
 
 @router.post("/generate")
 async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
