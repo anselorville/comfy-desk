@@ -68,10 +68,22 @@ async def wait_for_completion(
                 elif mtype == "executed":
                     data = msg.get("data", {})
                     if data.get("prompt_id") == prompt_id:
-                        outputs = data.get("output", {})
-                        for node_output in outputs.values():
-                            for img in node_output.get("images", []):
-                                output_images.append(img["filename"])
+                        def _collect_images(obj: Any) -> None:
+                            if isinstance(obj, dict):
+                                imgs = obj.get("images")
+                                if isinstance(imgs, list):
+                                    output_images.extend(
+                                        i["filename"] for i in imgs
+                                        if isinstance(i, dict) and i.get("filename")
+                                    )
+                                else:
+                                    for v in obj.values():
+                                        _collect_images(v)
+                            elif isinstance(obj, list):
+                                for v in obj:
+                                    _collect_images(v)
+
+                        _collect_images(data.get("output"))
 
                 elif mtype == "progress":
                     data = msg.get("data", {})
