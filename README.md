@@ -27,7 +27,46 @@ ComfyUI :8188  vLLM/JoyCaption :8000
 - **ComfyUI + SDXL**: ~5-8GB VRAM
 - Both fit in 22GB; for very large batches, stop one service during the other's execution
 
-## Quick Start
+## Repository Layout & Git Boundary
+
+This repo tracks **only the desk shell**: `frontend/`, `gateway/`, `training/`,
+`nginx/`, `startup/`, `scripts/`, docker/nginx configs, docs. The ComfyUI
+engine lives at `comfy-ui/` and is **never committed** — it is pulled from
+upstream and kept current with one command:
+
+```bash
+bash startup/bootstrap-comfyui.sh   # clone-or-update comfy-ui + uv sync (.venv)
+```
+
+Dependencies are unified in root `pyproject.toml` + `uv.lock` (engine AND
+gateway together); `.venv/` is materialized by `uv sync --frozen`.
+
+## Capability Skills (Plugin Layer)
+
+Workflows are raw execution graphs; **skills** are the product-facing
+capabilities built on top of them. A skill binds a workflow + scenario metadata
++ prompt template + parameter defaults into a reusable JSON plugin under
+`gateway/skills/` — additive, no gateway code changes, no restart:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/api/v1/skills` | List registered capability skills |
+| `POST` | `/api/v1/skills` | **Register a new skill from an existing workflow** |
+| `POST` | `/api/v1/skills/{id}/run` | Execute a skill (defaults ← overrides → templates) |
+| `DELETE` | `/api/v1/skills/{id}` | Remove a skill plugin |
+| `POST` | `/api/v1/workflows` | Register a new ComfyUI API-format workflow |
+| `GET`  | `/api/v1/artifacts` | Collected platform artifacts (task outputs) |
+
+Typical automation loop (LLM agent / external tool):
+
+```bash
+# 1. Generate a workflow graph for a requirement, register it:
+curl -X POST http://localhost/api/v1/workflows -d '{"name":"my_graph","title":"My Graph","workflow":{...}}'
+# 2. Encapsulate it as a scenario capability:
+curl -X POST http://localhost/api/v1/skills -d '{"name":"Product Shot","workflow":"my_graph","prompt_template":"{subject}, studio product photo","defaults":{"steps":28}}'
+# 3. Run it; collect results from the artifact feed:
+curl -X POST http://localhost/api/v1/skills/product-shot/run -d '{"params":{"subject":"ceramic teapot"}}'
+```
 
 ```bash
 # 1. Clone and configure

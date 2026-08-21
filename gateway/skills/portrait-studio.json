@@ -1,0 +1,30 @@
+{
+  "id": "portrait-studio",
+  "name": "Portrait Studio",
+  "description": "Scenario-tuned portrait photography capability built on the SDXL text-to-image workflow. Demonstrates the skill plugin format: workflow + prompt template + defaults = one reusable capability.",
+  "workflow": "txt2img_sdxl",
+  "tags": ["portrait", "photography", "sdxl"],
+  "prompt_template": "{subject}, professional portrait photography, 85mm lens, soft studio lighting, shallow depth of field, photorealistic",
+  "negative_prompt_template": "{negative_prompt}, blurry, distorted face, low quality, watermark",
+  "defaults": {
+    "subject": "a young woman with curly hair",
+    "negative_prompt": "",
+    "steps": 30,
+    "cfg": 6.5,
+    "width": 896,
+    "height": 1152,
+    "seed": -1,
+    "lora": "",
+    "lora_strength": 0.8
+  },
+  "fields": [
+    { "name": "subject", "type": "string", "label": "Subject", "default": "a young woman with curly hair" },
+    { "name": "negative_prompt", "type": "string", "label": "Negative Prompt", "default": "" },
+    { "name": "steps", "type": "number", "label": "Steps", "default": 30 },
+    { "name": "cfg", "type": "number", "label": "CFG Scale", "default": 6.5 },
+    { "name": "width", "type": "number", "label": "Width", "default": 896 },
+    { "name": "height", "type": "number", "label": "Height", "default": 1152 },
+    { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
+  ],
+  "created_at": "2026-08-22T00:00:00+00:00"
+}

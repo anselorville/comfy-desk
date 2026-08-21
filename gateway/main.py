@@ -20,6 +20,8 @@ from api.workflows import router as workflows_router
 from api.system import router as system_router
 from api.dataset import router as dataset_router
 from api.training import router as training_router
+from api.skills import router as skills_router
+from api.artifacts import router as artifacts_router
 from config import settings
 
 app = FastAPI(
@@ -46,6 +48,8 @@ app.include_router(workflows_router, prefix="/api/v1", tags=["Workflows"])
 app.include_router(system_router, prefix="/api/v1", tags=["System"])
 app.include_router(dataset_router, prefix="/api/v1", tags=["Dataset"])
 app.include_router(training_router, prefix="/api/v1", tags=["Training"])
+app.include_router(skills_router, prefix="/api/v1", tags=["Skills"])
+app.include_router(artifacts_router, prefix="/api/v1", tags=["Artifacts"])
 
 
 @app.get("/api/health", tags=["System"])

@@ -101,8 +101,8 @@ services:
     volumes:
       - comfyui_models:/opt/ComfyUI/models
       - comfyui_output:/opt/ComfyUI/output
-      - ./comfyui/custom_nodes:/opt/ComfyUI/custom_nodes
-      - ./comfyui/workflows:/opt/ComfyUI/user/default/workflows
+      - ./comfy-ui/custom_nodes:/opt/ComfyUI/custom_nodes
+      - ./comfy-ui/user/default/workflows:/opt/ComfyUI/user/default/workflows
     ports:
       - "${COMFYUI_PORT:-8188}:8188"  # expose for direct access during dev
     networks:

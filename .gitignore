@@ -15,10 +15,13 @@ lora_output/
 outputs/
 *.log
 
-# Ignore large directories and virtual environments
+# ── Engine boundary: internal ComfyUI checkout is NEVER managed by this repo ──
+# Provisioned via `bash startup/bootstrap-comfyui.sh` (clone-or-update + uv sync).
 .venv/
 ComfyUI/
 comfy-ui/
+comfyui/
+comfy-ui_*/
 .vscode/
 .draft/
 .codex
