@@ -12,9 +12,8 @@ echo "=============================================="
 cd "$(dirname "$0")/.."
 
 if [ ! -d "comfy-ui" ]; then
-    echo "[ERROR] comfy-ui directory not found."
-    echo "Expected path: $(pwd)/comfy-ui"
-    exit 1
+    echo "[INFO] comfy-ui not found — bootstrapping engine (clone + env sync) ..."
+    bash "$(dirname "$0")/bootstrap-comfyui.sh"
 fi
 
 if [ -f ".venv/bin/activate" ]; then
