@@ -31,10 +31,10 @@ echo "-> Starting ComfyUI Engine (Port 8188)..."
 (cd comfy-ui && python main.py --listen 0.0.0.0 --port 8188) &
 
 echo "-> Starting FastAPI Gateway (Port 8001)..."
-(cd gateway && uvicorn main:app --reload --host 0.0.0.0 --port 8001) &
+(cd gateway && COMFYUI_URL=http://localhost:8188 uvicorn main:app --reload --host 0.0.0.0 --port 8001) &
 
 echo "-> Starting Next.js Frontend (Port 3000)..."
-(cd frontend && npm run dev) &
+(cd frontend && NEXT_PUBLIC_API_BASE=http://localhost:8001/api/v1 npm run dev) &
 
 echo "=============================================="
 echo "[SUCCESS] All services started in background!"

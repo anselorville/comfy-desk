@@ -48,6 +48,7 @@ async def _run_generation(task_id: str, request: GenerateRequest):
             "seed": seed,
             "lora": request.lora,
             "lora_strength": request.lora_strength,
+            "filename_prefix": f"comfydesk_{task_id[:8]}",
         }
 
         wf = load_workflow(request.workflow)

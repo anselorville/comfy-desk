@@ -39,7 +39,7 @@ async def wait_for_completion(
     prompt_id: str,
     client_id: str,
     task_id: str | None = None,
-    timeout: float = 300.0,
+    timeout: float = 1200.0,
 ) -> list[str]:
     """
     Connect to ComfyUI WebSocket and wait until the prompt finishes.
