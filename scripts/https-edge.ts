@@ -13,16 +13,25 @@ const TO_GATEWAY = /^\/(api|images|upload|studio)\//;
 
 async function proxy(target: string, req: Request): Promise<Response> {
   const url = new URL(req.url);
+  // Ask upstream for identity encoding: Bun's fetch auto-decompresses bodies,
+  // so forwarding the original Content-Encoding header desyncs clients
+  // (ERR_CONTENT_DECODING_FAILED on devices).
+  const fwdHeaders = new Headers(req.headers);
+  fwdHeaders.delete("accept-encoding");
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
   const upstream = await fetch(target + url.pathname + url.search, {
     method: req.method,
-    headers: req.headers,
+    headers: fwdHeaders,
     body,
   });
+  const respHeaders = new Headers(upstream.headers);
+  respHeaders.delete("content-encoding");
+  respHeaders.delete("content-length");
+  respHeaders.delete("transfer-encoding");
   return new Response(upstream.body, {
     status: upstream.status,
-    headers: upstream.headers,
+    headers: respHeaders,
   });
 }
 
