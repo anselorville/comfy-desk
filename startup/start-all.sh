@@ -5,6 +5,8 @@ set -a
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 [ -f .env ] && source .env
+# 本地单机拓扑:引擎固定在本机,忽略 .env 里的 docker 主机名
+export COMFYUI_URL=http://localhost:8188
 set +a
 mkdir -p logs
 
