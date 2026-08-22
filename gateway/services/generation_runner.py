@@ -10,7 +10,7 @@ import asyncio
 import uuid
 import logging
 
-from services import comfy_client
+from services import comfy_client, gpu_watchdog
 from services.task_store import update_task, TaskStatus
 from services.workflow_loader import load_workflow, inject_params
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def run_generation_task(task_id: str, workflow_name: str, params: dict) -> None:
+    gpu_watchdog.touch()
     client_id = str(uuid.uuid4())
     try:
         await update_task(task_id, status=TaskStatus.RUNNING, progress=10)

@@ -8,12 +8,17 @@ from contextlib import asynccontextmanager
 
 from services.task_store import init_db
 from services.studio_store import init_db as init_studio_db
+from services import gpu_watchdog
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     await init_studio_db()
-    yield
+    watchdog_task = gpu_watchdog.start()
+    try:
+        yield
+    finally:
+        watchdog_task.cancel()
 
 from api.generate import router as generate_router
 from api.tasks import router as tasks_router

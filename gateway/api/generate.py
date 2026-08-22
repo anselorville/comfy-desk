@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, BackgroundTasks, File, Form, UploadFile
 from pydantic import BaseModel, Field
 
-from services import comfy_client
+from services import comfy_client, gpu_watchdog
 from services.task_store import create_task
 from services.generation_runner import run_generation_task
 from api.system import get_system_mode
@@ -37,6 +37,7 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
     if get_system_mode() == "training":
         raise HTTPException(status_code=409, detail="System is occupied by training")
     task = await create_task(kind="generate", **request.model_dump())
+    gpu_watchdog.touch()
     background_tasks.add_task(
         run_generation_task,
         task.id,
@@ -110,5 +111,6 @@ async def generate_auto(
         runner_params["length"] = length
 
     task = await create_task(kind="generate", **params)
+    gpu_watchdog.touch()
     background_tasks.add_task(run_generation_task, task.id, workflow, runner_params)
     return {"task_id": task.id, "status": "pending"}
