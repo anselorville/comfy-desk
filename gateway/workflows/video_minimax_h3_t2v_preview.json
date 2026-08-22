@@ -21,10 +21,10 @@
       ],
       "mode": "image",
       "prompt": "__POSITIVE_PROMPT__",
-      "resolution": "768P",
+      "resolution": "480P",
       "aspect_ratio": "16:9",
-      "width": 1344,
-      "height": 768,
+      "width": 832,
+      "height": 480,
       "seconds": "__SECONDS__",
       "advanced": false,
       "fps": 24.0,
@@ -42,7 +42,7 @@
     "class_type": "ModelAttentionBackend",
     "inputs": {
       "model": [
-        "2",
+        "3",
         0
       ],
       "attention": "pytorch attention"
@@ -77,7 +77,7 @@
         0
       ],
       "scheduler": "simple",
-      "steps": 20,
+      "steps": 8,
       "denoise": 1.0
     },
     "_meta": {
@@ -205,6 +205,20 @@
     },
     "_meta": {
       "title": "保存 MP4"
+    }
+  },
+  "3": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "strength_model": 1.0
+    },
+    "_meta": {
+      "title": "Turbo LoRA (8步快速)"
     }
   }
 }

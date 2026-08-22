@@ -1,9 +1,24 @@
 {
-  "name": "Video MiniMax H3 T2V (含原生音频)",
-  "description": "MiniMax H3 文生视频(GGUF Q4_K 量化栈,Turbo 8 步)。输出带原生立体声(对白/音效/音乐一次生成)。480P/16:9/5 秒起步。提示词建议按官方指南分镜描述画面+镜头+声音。来源:docs.comfy.org/tutorials/video/minimax/minimax-h3 + ComfyUI-MiniMaxH3-Easy。",
+  "name": "Video MiniMax H3 T2V (官方全质量)",
+  "description": "MiniMax H3 文生视频,按官方模板验证配置:20 步、原生画布 1344×768(0.98MP)、标准注意力,画面+原生立体声一次生成。权重栈为 Turing 适配版(INT8 DiT 原生 + Qwen3-VL GGUF TE)。预计单张 30-60 分钟。提示词遵循官方分镜指南:场景→镜头→声音。来源:docs.comfy.org/tutorials/video/minimax/minimax-h3。",
   "fields": [
-    {"name": "prompt", "type": "string", "label": "Prompt", "default": ""},
-    {"name": "seed", "type": "number", "label": "Seed", "default": -1},
-    {"name": "seconds", "type": "number", "label": "时长(秒)", "default": 5}
+    {
+      "name": "prompt",
+      "type": "string",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1
+    },
+    {
+      "name": "seconds",
+      "type": "number",
+      "label": "时长(秒)",
+      "default": 5
+    }
   ]
 }
