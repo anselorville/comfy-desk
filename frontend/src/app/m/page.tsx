@@ -30,6 +30,8 @@ type Req = {
   created_at: string;
 };
 
+/* 负向提示为用户偏好:可空但必须存在(高级折叠内) */
+
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   queued:    { label: "排队中",   cls: "bg-slate-100 text-slate-600" },
   thinking:  { label: "AI 规划中", cls: "bg-blue-50 text-blue-700 animate-pulse" },
@@ -55,6 +57,8 @@ export default function StudioPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [preview, setPreview] = useState(false);
+  const [negPrompt, setNegPrompt] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notifOn, setNotifOn] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -100,6 +104,7 @@ export default function StudioPage() {
       const fd = new FormData();
       fd.append("message", message.trim());
       fd.append("preview", String(preview));
+      fd.append("negative_prompt", negPrompt);
       if (imageFile) fd.append("image", imageFile);
       const res = await fetch(`${apiBase()}/studio/requests`, { method: "POST", body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? res.statusText);
@@ -214,6 +219,26 @@ export default function StudioPage() {
             快速预览
           </label>
         </div>
+        {advancedOpen && (
+        <div className="mt-3">
+          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            负向提示词(可留空)
+          </label>
+          <textarea
+            value={negPrompt}
+            onChange={(e) => setNegPrompt(e.target.value)}
+            rows={2}
+            placeholder="不希望出现的元素…"
+            className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none placeholder:text-slate-400"
+          />
+        </div>
+        )}
+        <button
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="mt-2 text-[11px] text-slate-400 hover:text-slate-600"
+        >
+          {advancedOpen ? "收起高级选项 ▲" : "高级选项 ▼"}
+        </button>
         <button
           onClick={submit}
           disabled={!message.trim() || submitting}

@@ -121,7 +121,9 @@ async def process_request(request_id: str) -> None:
         if not reply["tool_calls"]:
             raise ValueError(f"Agent 未返回有效决策: {reply['content']!r}")
         params = _coerce(reply["tool_calls"][0]["arguments"], request_id, preview)
-
+        user_negative = (req.get("params") or {}).get("negative_prompt")
+        if user_negative:
+            params["negative_prompt"] = str(user_negative)
         # 2) reference image → ComfyUI input dir
         if req["ref_image"]:
             image_path = UPLOAD_DIR / req["ref_image"]

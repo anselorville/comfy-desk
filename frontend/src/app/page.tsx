@@ -29,6 +29,8 @@ export default function GeneratePage() {
   const [aspectIdx, setAspectIdx] = useState(0);
   const [seed, setSeed] = useState(-1);
   const [loraStrength, setLoraStrength] = useState(1.0);
+  const [refFile, setRefFile] = useState<File | null>(null);
+  const [refUrl, setRefUrl] = useState("");
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [resultImages, setResultImages] = useState<string[]>([]);
@@ -79,9 +81,11 @@ export default function GeneratePage() {
       if (isAuto) {
         ({ task_id } = await generateAuto({
           prompt: prompt.trim(),
+          negative_prompt: negPrompt,
           width: ar.w,
           height: ar.h,
           seed,
+          image: refFile ?? undefined,
         }));
       } else {
         ({ task_id } = await generate({
@@ -108,7 +112,7 @@ export default function GeneratePage() {
     } finally {
       setLoading(false);
     }
-  }, [prompt, negPrompt, isAuto, workflow, steps, cfg, aspectIdx, seed, loraStrength]);
+  }, [prompt, negPrompt, isAuto, workflow, steps, cfg, aspectIdx, seed, loraStrength, refFile]);
 
   const progress = task?.progress ?? 0;
   const status = task?.status ?? "idle";
@@ -142,19 +146,17 @@ export default function GeneratePage() {
                 className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
               />
             </div>
-            {!isAuto && (
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  负向提示词
-                </label>
-                <textarea
-                  value={negPrompt}
-                  onChange={(e) => setNegPrompt(e.target.value)}
-                  rows={2}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                负向提示词(可留空)
+              </label>
+              <textarea
+                value={negPrompt}
+                onChange={(e) => setNegPrompt(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+              />
+            </div>
           </div>
 
           {/* Workflow & Aspect */}
@@ -193,6 +195,40 @@ export default function GeneratePage() {
               </p>
             </div>
 
+            {isAuto && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                角色参考图(可选 — 附图将生成以该图为首帧的锚定视频)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="desktop-ref-image" type="file" accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setRefFile(f);
+                    setRefUrl(f ? URL.createObjectURL(f) : "");
+                  }}
+                />
+                <label
+                  htmlFor="desktop-ref-image"
+                  className="text-xs px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 cursor-pointer font-bold border border-indigo-200"
+                >
+                  🖼 选择图片
+                </label>
+                {refUrl && (
+                  <span className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={refUrl} alt="参考图" className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200" />
+                    <button
+                      onClick={() => { setRefFile(null); setRefUrl(""); }}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[10px] leading-none"
+                    >✕</button>
+                  </span>
+                )}
+              </div>
+            </div>
+            )}
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
                 画幅比例
@@ -288,7 +324,7 @@ export default function GeneratePage() {
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
             }`}
           >
-            {loading ? "⌛ 处理中..." : isAuto ? "✦ 智能生成" : "✦ 立即生成"}
+            {loading ? "⌛ 处理中..." : isAuto ? (refFile ? "✦ 生成锚定视频" : "✦ 智能生成") : "✦ 立即生成"}
           </button>
         </div>
 
@@ -317,9 +353,15 @@ export default function GeneratePage() {
 
             {resultImages.length > 0 ? (
               <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[800px] pr-2">
-                {resultImages.map((src, idx) => (
+                {resultImages.map((src, idx) => {
+                  const isVideo = /\.(mp4|webm)$/i.test(src);
+                  return (
                   <div key={idx} className="group relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition-all hover:shadow-xl">
-                    <img src={src} alt="Generated" className="w-full block" />
+                    {isVideo ? (
+                      <video src={src} controls playsInline className="w-full block bg-black" />
+                    ) : (
+                      <img src={src} alt="Generated" className="w-full block" />
+                    )}
                     <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                       <a
                         href={src} download
@@ -329,7 +371,8 @@ export default function GeneratePage() {
                       </a>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : !loading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 text-slate-300">

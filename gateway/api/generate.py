@@ -3,10 +3,13 @@ POST /api/v1/generate — submit a text-to-image task
 GET  /api/v1/generate/{task_id}/status — alias for /tasks/{task_id}
 """
 import logging
+import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, File, Form, UploadFile
 from pydantic import BaseModel, Field
 
+from services import comfy_client
 from services.task_store import create_task
 from services.generation_runner import run_generation_task
 from api.system import get_system_mode
@@ -48,39 +51,64 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
     return {"task_id": task.id, "status": "pending"}
 
 
-class AutoGenerateRequest(BaseModel):
-    """One-tap generation — the platform picks model & canonical params."""
-    prompt: str = Field(..., description="Positive prompt / text description")
-    width: int = Field(1024, ge=256, le=2048)
-    height: int = Field(1024, ge=256, le=2048)
-    seed: int = Field(-1, description="-1 for random")
-
-
 @router.post("/generate/auto")
-async def generate_auto(request: AutoGenerateRequest, background_tasks: BackgroundTasks):
-    """智能生成:平台固定使用本地最优的 Z-Image Turbo 及其规范参数。"""
+async def generate_auto(
+    background_tasks: BackgroundTasks,
+    prompt: str = Form(...),
+    negative_prompt: str = Form(""),
+    width: int = Form(1024),
+    height: int = Form(1024),
+    seed: int = Form(-1),
+    image: UploadFile | None = File(None),
+):
+    """
+    智能生成:平台固定模型与规范参数。
+    无参考图 → Z-Image Turbo 文生图;附参考图 → Wan2.2 I2V 角色锚定视频(首帧=参考图)。
+    """
     if get_system_mode() == "training":
         raise HTTPException(status_code=409, detail="System is occupied by training")
-    workflow = "image_z_image_turbo"
+
+    image_filename = ""
+    if image and image.filename:
+        data = await image.read()
+        ext = Path(image.filename).suffix.lower().lstrip(".") or "png"
+        image_filename = f"auto_{uuid.uuid4().hex[:12]}.{ext}"
+        upload_dir = Path(__file__).parent.parent / "uploads"
+        upload_dir.mkdir(exist_ok=True)
+        (upload_dir / image_filename).write_bytes(data)
+
+    if image_filename:
+        workflow = "video_wan22_ti2v_5b_i2v"
+        length = 121
+        stored = await comfy_client.upload_image(
+            (Path(__file__).parent.parent / "uploads" / image_filename).read_bytes(),
+            image_filename,
+        )
+    else:
+        workflow = "image_z_image_turbo"
+        length = None
+        stored = ""
+
     params = {
-        "prompt": request.prompt,
-        "negative_prompt": "",
+        "prompt": prompt,
+        "negative_prompt": negative_prompt,
         "workflow": workflow,
-        "steps": 8,
-        "cfg": 1.0,
-        "width": request.width,
-        "height": request.height,
-        "seed": request.seed,
+        "steps": 8 if not image_filename else 20,
+        "cfg": 1.0 if not image_filename else 5.0,
+        "width": width,
+        "height": height,
+        "seed": seed,
     }
+    runner_params = {
+        **params,
+        "positive_prompt": prompt,
+        "filename_prefix": f"comfydesk_{uuid.uuid4().hex[:8]}",
+    }
+    if stored:
+        runner_params["image_filename"] = stored
+    if length:
+        runner_params["length"] = length
+
     task = await create_task(kind="generate", **params)
-    background_tasks.add_task(
-        run_generation_task,
-        task.id,
-        workflow,
-        {
-            **params,
-            "positive_prompt": request.prompt,
-            "filename_prefix": f"comfydesk_{task.id[:8]}",
-        },
-    )
+    background_tasks.add_task(run_generation_task, task.id, workflow, runner_params)
     return {"task_id": task.id, "status": "pending"}

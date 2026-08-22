@@ -28,6 +28,7 @@ MAX_IMAGE_BYTES = 20 * 1024 * 1024
 @router.post("/requests")
 async def create_request(
     message: str = Form(...),
+    negative_prompt: str = Form(""),
     preview: bool = Form(False),
     image: UploadFile | None = File(None),
 ):
@@ -47,9 +48,13 @@ async def create_request(
         (studio_agent.UPLOAD_DIR / ref_name).write_bytes(data)
 
     req = await store.create_request(message, ref_image=ref_name)
+    fields: dict = {}
     if preview:
-        req["detail"] = "[PREVIEW]"
-        req = await store.update_request(req["id"], detail="[PREVIEW]")
+        fields["detail"] = "[PREVIEW]"
+    if negative_prompt.strip():
+        fields["params"] = {"negative_prompt": negative_prompt.strip()}
+    if fields:
+        req = await store.update_request(req["id"], **fields) or req
     asyncio.get_running_loop().create_task(studio_agent.process_request(req["id"]))
     return req
 

@@ -173,16 +173,24 @@ export async function startTraining(epochLimit: number, learningRate: number): P
 
 export interface AutoGenerateRequest {
   prompt: string;
+  negative_prompt?: string;
   width?: number;
   height?: number;
   seed?: number;
+  image?: File;
 }
 
 export async function generateAuto(req: AutoGenerateRequest): Promise<{ task_id: string }> {
+  const fd = new FormData();
+  fd.append("prompt", req.prompt);
+  if (req.negative_prompt) fd.append("negative_prompt", req.negative_prompt);
+  if (req.width) fd.append("width", String(req.width));
+  if (req.height) fd.append("height", String(req.height));
+  if (req.seed !== undefined) fd.append("seed", String(req.seed));
+  if (req.image) fd.append("image", req.image);
   const res = await fetch(`${API_BASE}/generate/auto`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: fd,
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
