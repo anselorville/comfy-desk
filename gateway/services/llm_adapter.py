@@ -10,22 +10,19 @@ Any OpenAI-compatible provider works (DeepSeek / GLM / DashScope / vLLM / …).
 """
 import json
 import logging
-import os
 from typing import Any
 
 import httpx
 
-logger = logging.getLogger(__name__)
-
 _TIMEOUT = httpx.Timeout(60.0)
 
-
-def _cfg() -> dict[str, str]:
+def _cfg() -> dict[str, Any]:
+    from config import settings
     return {
-        "base_url": os.environ.get("AGENT_LLM_BASE_URL", "").rstrip("/"),
-        "api_key": os.environ.get("AGENT_LLM_API_KEY", ""),
-        "model": os.environ.get("AGENT_LLM_MODEL", ""),
-        "mock": os.environ.get("AGENT_LLM_MOCK", ""),
+        "base_url": (settings.agent_llm_base_url or "").rstrip("/"),
+        "api_key": settings.agent_llm_api_key or "",
+        "model": settings.agent_llm_model or "",
+        "mock": bool(settings.agent_llm_mock),
     }
 
 
