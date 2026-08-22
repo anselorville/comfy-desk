@@ -1,5 +1,19 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001/api/v1";
+/*
+ * Resolve at runtime so any LAN device can open the app:
+ * - direct dev access on :3000 → gateway at <host>:8001
+ * - through the HTTPS edge (:8443) → same-origin /api/v1
+ * A build-time NEXT_PUBLIC_API_BASE would bake "localhost" into the bundle
+ * and break every non-host device.
+ */
+function resolveApiBase(): string {
+  if (typeof window === "undefined") return "/api/v1";
+  const loc = window.location;
+  return loc.port === "3000"
+    ? `${loc.protocol}//${loc.hostname}:8001/api/v1`
+    : "/api/v1";
+}
+
+export const API_BASE = resolveApiBase();
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
