@@ -47,6 +47,7 @@ dependencies = [
     "uvicorn[standard]==0.32.1",
     "websockets==14.1",
     "yarl>=1.18.0",
+    "pywebpush>=2.4.0",
 ]
 
 [tool.uv.sources]

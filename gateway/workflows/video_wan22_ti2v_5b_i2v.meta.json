@@ -1,0 +1,14 @@
+{
+  "name": "Video Wan2.2 TI2V 5B (I2V 角色锚定)",
+  "description": "通义万相 2.2 TI2V 5B 图生视频:上传角色参考图作为视频首帧,角色属性(长相/服装/配色)由参考图锚定,避免抽卡。需参数 image_filename(由网关上传后注入)。权重同 T2V 版:wan2.2_ti2v_5B_fp16 + umt5_xxl_fp8_e4m3fn_scaled + wan2.2_vae。",
+  "fields": [
+    {"name": "prompt", "type": "string", "label": "Prompt", "default": ""},
+    {"name": "negative_prompt", "type": "string", "label": "Negative", "default": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"},
+    {"name": "steps", "type": "number", "label": "Steps", "default": 20},
+    {"name": "cfg", "type": "number", "label": "CFG", "default": 5},
+    {"name": "width", "type": "number", "label": "Width", "default": 1280},
+    {"name": "height", "type": "number", "label": "Height", "default": 704},
+    {"name": "length", "type": "number", "label": "Frames (24fps)", "default": 121},
+    {"name": "seed", "type": "number", "label": "Seed", "default": -1}
+  ]
+}

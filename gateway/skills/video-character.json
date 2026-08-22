@@ -1,0 +1,31 @@
+{
+  "id": "video-character",
+  "name": "Video Character (角色锚定视频)",
+  "description": "基于 Wan2.2 TI2V 5B 图生视频的角色一致性能力:以角色参考图为首帧,按文字描述生成角色动态视频。agent 依据用户消息与参考图自动填充 subject 与镜头/动作描述。",
+  "workflow": "video_wan22_ti2v_5b_i2v",
+  "tags": ["video", "i2v", "character", "wan22"],
+  "prompt_template": "{subject}",
+  "negative_prompt_template": "{negative_prompt}",
+  "requires_image": true,
+  "defaults": {
+    "subject": "the character looks around slowly, natural motion",
+    "negative_prompt": "",
+    "steps": 20,
+    "cfg": 5,
+    "width": 1280,
+    "height": 704,
+    "length": 121,
+    "seed": -1
+  },
+  "fields": [
+    { "name": "subject", "type": "string", "label": "Subject / Motion", "default": "the character looks around slowly, natural motion" },
+    { "name": "negative_prompt", "type": "string", "label": "Negative Prompt", "default": "" },
+    { "name": "steps", "type": "number", "label": "Steps", "default": 20 },
+    { "name": "cfg", "type": "number", "label": "CFG Scale", "default": 5 },
+    { "name": "width", "type": "number", "label": "Width", "default": 1280 },
+    { "name": "height", "type": "number", "label": "Height", "default": 704 },
+    { "name": "length", "type": "number", "label": "Frames (24fps)", "default": 121 },
+    { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
+  ],
+  "created_at": "2026-08-22T00:00:00+00:00"
+}

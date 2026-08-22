@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from services.task_store import init_db
+from services.studio_store import init_db as init_studio_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await init_studio_db()
     yield
 
 from api.generate import router as generate_router
@@ -23,6 +25,7 @@ from api.training import router as training_router
 from api.images import router as images_router
 from api.skills import router as skills_router
 from api.artifacts import router as artifacts_router
+from api.studio import router as studio_router
 from config import settings
 
 app = FastAPI(
@@ -52,6 +55,7 @@ app.include_router(training_router, prefix="/api/v1", tags=["Training"])
 app.include_router(images_router, tags=["Images"])
 app.include_router(skills_router, prefix="/api/v1", tags=["Skills"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["Artifacts"])
+app.include_router(studio_router, prefix="/api/v1", tags=["Studio"])
 
 
 @app.get("/api/health", tags=["System"])

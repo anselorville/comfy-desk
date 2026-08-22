@@ -13,6 +13,11 @@ const links = [
 
 export default function NavBar() {
   const pathname = usePathname();
+  if (pathname?.startsWith("/m")) return null;
+  return <NavBarInner pathname={pathname} />;
+}
+
+function NavBarInner({ pathname }: { pathname: string }) {
   const [mode, setMode] = useState("idle");
 
   useEffect(() => {

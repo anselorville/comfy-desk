@@ -1,0 +1,112 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "wan2.2_ti2v_5B_fp16.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": { "title": "Load Diffusion Model (Wan2.2 TI2V 5B)" }
+  },
+  "2": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": {
+      "model": ["1", 0],
+      "shift": 8
+    },
+    "_meta": { "title": "Model Sampling SD3 (shift=8)" }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "_meta": { "title": "Load CLIP (UMT5-XXL)" }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "__POSITIVE_PROMPT__",
+      "clip": ["3", 0]
+    },
+    "_meta": { "title": "Positive Prompt" }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "__NEGATIVE_PROMPT__",
+      "clip": ["3", 0]
+    },
+    "_meta": { "title": "Negative Prompt" }
+  },
+  "6": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "wan2.2_vae.safetensors"
+    },
+    "_meta": { "title": "Load VAE (Wan2.2)" }
+  },
+  "12": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "__IMAGE_FILENAME__",
+      "upload": "image"
+    },
+    "_meta": { "title": "角色参考图 (首帧锚定)" }
+  },
+  "7": {
+    "class_type": "Wan22ImageToVideoLatent",
+    "inputs": {
+      "vae": ["6", 0],
+      "start_image": ["12", 0],
+      "width": "__WIDTH__",
+      "height": "__HEIGHT__",
+      "length": "__LENGTH__",
+      "batch_size": 1
+    },
+    "_meta": { "title": "I2V Video Latent (角色图作为首帧)" }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": "__SEED__",
+      "steps": "__STEPS__",
+      "cfg": "__CFG__",
+      "sampler_name": "uni_pc",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": ["2", 0],
+      "positive": ["4", 0],
+      "negative": ["5", 0],
+      "latent_image": ["7", 0]
+    },
+    "_meta": { "title": "KSampler" }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": ["8", 0],
+      "vae": ["6", 0]
+    },
+    "_meta": { "title": "VAE Decode" }
+  },
+  "10": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": ["9", 0],
+      "fps": 24
+    },
+    "_meta": { "title": "Create Video (24fps)" }
+  },
+  "11": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": ["10", 0],
+      "filename_prefix": "__FILENAME_PREFIX__",
+      "format": "auto",
+      "codec": "auto"
+    },
+    "_meta": { "title": "Save Video (mp4)" }
+  }
+}
