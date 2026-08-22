@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   generate,
+  generateAuto,
   waitForTask,
   listWorkflows,
   type TaskResponse,
@@ -17,16 +18,17 @@ const ASPECT_RATIOS = [
   { label: "9:16", w: 720, h: 1280 },
 ];
 
+const AUTO_WORKFLOW = "auto";
+
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
-  const [negPrompt, setNegPrompt] = useState("blurry, low quality, watermark, text, signature");
-  const [workflow, setWorkflow] = useState("txt2img_sdxl");
-  const [steps, setSteps] = useState(28);
-  const [cfg, setCfg] = useState(7);
+  const [negPrompt, setNegPrompt] = useState("");
+  const [workflow, setWorkflow] = useState(AUTO_WORKFLOW);
+  const [steps, setSteps] = useState(8);
+  const [cfg, setCfg] = useState(1);
   const [aspectIdx, setAspectIdx] = useState(0);
   const [seed, setSeed] = useState(-1);
-  const [lora, setLora] = useState("");
-  const [loraStrength, setLoraStrength] = useState(0.8);
+  const [loraStrength, setLoraStrength] = useState(1.0);
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [resultImages, setResultImages] = useState<string[]>([]);
@@ -36,6 +38,35 @@ export default function GeneratePage() {
     listWorkflows().then(setWorkflows).catch(console.error);
   }, []);
 
+  const isAuto = workflow === AUTO_WORKFLOW;
+
+  /* 选择显式工作流时,回填该工作流 meta 里的规范参数 */
+  const pickWorkflow = useCallback(
+    (id: string) => {
+      setWorkflow(id);
+      if (id === AUTO_WORKFLOW) return;
+      const meta = workflows.find((w) => w.id === id);
+      if (!meta?.fields) return;
+      for (const f of meta.fields) {
+        if (f.default === "" || f.default == null) continue;
+        if (f.name === "steps") setSteps(Number(f.default));
+        else if (f.name === "cfg") setCfg(Number(f.default));
+        else if (f.name === "seed") setSeed(Number(f.default));
+        else if (f.name === "lora_strength") setLoraStrength(Number(f.default));
+      }
+    },
+    [workflows]
+  );
+
+  const hasLoraField = useMemo(
+    () =>
+      !isAuto &&
+      !!workflows.find((w) => w.id === workflow)?.fields?.some(
+        (f) => f.name === "lora_strength"
+      ),
+    [isAuto, workflow, workflows]
+  );
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
     setLoading(true);
@@ -44,18 +75,27 @@ export default function GeneratePage() {
 
     try {
       const ar = ASPECT_RATIOS[aspectIdx];
-      const { task_id } = await generate({
-        prompt,
-        negative_prompt: negPrompt,
-        workflow,
-        steps,
-        cfg,
-        width: ar.w,
-        height: ar.h,
-        seed,
-        lora,
-        lora_strength: loraStrength,
-      });
+      let task_id: string;
+      if (isAuto) {
+        ({ task_id } = await generateAuto({
+          prompt: prompt.trim(),
+          width: ar.w,
+          height: ar.h,
+          seed,
+        }));
+      } else {
+        ({ task_id } = await generate({
+          prompt,
+          negative_prompt: negPrompt,
+          workflow,
+          steps,
+          cfg,
+          width: ar.w,
+          height: ar.h,
+          seed,
+          lora_strength: loraStrength,
+        }));
+      }
 
       await waitForTask(task_id, (t) => {
         setTask(t);
@@ -68,7 +108,7 @@ export default function GeneratePage() {
     } finally {
       setLoading(false);
     }
-  }, [prompt, negPrompt, workflow, steps, cfg, aspectIdx, seed, lora, loraStrength]);
+  }, [prompt, negPrompt, isAuto, workflow, steps, cfg, aspectIdx, seed, loraStrength]);
 
   const progress = task?.progress ?? 0;
   const status = task?.status ?? "idle";
@@ -76,7 +116,7 @@ export default function GeneratePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* ── Left panel: Controls ─────────────────────────────────────── */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="mb-2">
@@ -102,17 +142,19 @@ export default function GeneratePage() {
                 className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
               />
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                负向提示词
-              </label>
-              <textarea
-                value={negPrompt}
-                onChange={(e) => setNegPrompt(e.target.value)}
-                rows={2}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
+            {!isAuto && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  负向提示词
+                </label>
+                <textarea
+                  value={negPrompt}
+                  onChange={(e) => setNegPrompt(e.target.value)}
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+            )}
           </div>
 
           {/* Workflow & Aspect */}
@@ -122,10 +164,20 @@ export default function GeneratePage() {
                 模型选择
               </label>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setWorkflow(AUTO_WORKFLOW)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+                    isAuto
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200"
+                      : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  ✨ 智能生成
+                </button>
                 {workflows.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => setWorkflow(p.id)}
+                    onClick={() => pickWorkflow(p.id)}
                     className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
                       workflow === p.id
                         ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
@@ -136,6 +188,9 @@ export default function GeneratePage() {
                   </button>
                 ))}
               </div>
+              <p className="mt-2 text-[11px] text-slate-400">
+                {isAuto ? "平台自动选择最优模型与参数，无需任何配置" : "已应用该工作流的推荐参数"}
+              </p>
             </div>
 
             <div>
@@ -160,80 +215,69 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* Parameters */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  步数 (Steps)
-                </label>
-                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {steps}
-                </span>
+          {/* Parameters — 仅显式工作流显示 */}
+          {!isAuto && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    步数 (Steps)
+                  </label>
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                    {steps}
+                  </span>
+                </div>
+                <input
+                  type="range" min={1} max={100} value={steps}
+                  onChange={(e) => setSteps(+e.target.value)}
+                  className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
               </div>
-              <input
-                type="range" min={10} max={100} value={steps}
-                onChange={(e) => setSteps(+e.target.value)}
-                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  CFG 指导
-                </label>
-                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {cfg.toFixed(1)}
-                </span>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    CFG 指导
+                  </label>
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                    {cfg.toFixed(1)}
+                  </span>
+                </div>
+                <input
+                  type="range" min={1} max={20} step={0.5} value={cfg}
+                  onChange={(e) => setCfg(+e.target.value)}
+                  className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
               </div>
-              <input
-                type="range" min={1} max={20} step={0.5} value={cfg}
-                onChange={(e) => setCfg(+e.target.value)}
-                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Seed
-              </label>
-              <input
-                type="number" value={seed}
-                onChange={(e) => setSeed(+e.target.value)}
-                placeholder="-1 (随机)"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* LoRA */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                LoRA 模型名
-              </label>
-              <input
-                type="text" value={lora}
-                onChange={(e) => setLora(e.target.value)}
-                placeholder="例如: anime_style"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  LoRA 权重
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Seed
                 </label>
-                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {loraStrength.toFixed(2)}
-                </span>
+                <input
+                  type="number" value={seed}
+                  onChange={(e) => setSeed(+e.target.value)}
+                  placeholder="-1 (随机)"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
+                />
               </div>
-              <input
-                type="range" min={0} max={2} step={0.05} value={loraStrength}
-                onChange={(e) => setLoraStrength(+e.target.value)}
-                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-              />
+              {hasLoraField && (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      LoRA 权重
+                    </label>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      {loraStrength.toFixed(2)}
+                    </span>
+                  </div>
+                  <input
+                    type="range" min={0} max={2} step={0.05} value={loraStrength}
+                    onChange={(e) => setLoraStrength(+e.target.value)}
+                    className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <button
             onClick={handleGenerate}
@@ -244,7 +288,7 @@ export default function GeneratePage() {
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
             }`}
           >
-            {loading ? "⌛ 处理中..." : "✦ 立即生成"}
+            {loading ? "⌛ 处理中..." : isAuto ? "✦ 智能生成" : "✦ 立即生成"}
           </button>
         </div>
 
@@ -264,7 +308,7 @@ export default function GeneratePage() {
           <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm min-h-[600px] flex flex-col relative overflow-hidden">
             {loading && (
               <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-50 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-indigo-600 transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 ></div>

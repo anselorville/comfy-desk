@@ -170,3 +170,20 @@ export async function startTraining(epochLimit: number, learningRate: number): P
   });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export interface AutoGenerateRequest {
+  prompt: string;
+  width?: number;
+  height?: number;
+  seed?: number;
+}
+
+export async function generateAuto(req: AutoGenerateRequest): Promise<{ task_id: string }> {
+  const res = await fetch(`${API_BASE}/generate/auto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

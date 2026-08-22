@@ -20,6 +20,12 @@
       "default": 1024
     },
     {
+      "name": "cfg",
+      "type": "number",
+      "label": "CFG",
+      "default": 1.0
+    },
+    {
       "name": "height",
       "type": "number",
       "label": "Height",

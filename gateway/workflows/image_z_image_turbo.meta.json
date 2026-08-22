@@ -1,10 +1,41 @@
 {
   "name": "Image to Image (Turbo)",
   "fields": [
-    {"name": "prompt", "type": "string", "label": "Prompt", "default": ""},
-    {"name": "steps", "type": "number", "label": "Steps", "default": 10},
-    {"name": "width", "type": "number", "label": "Width", "default": 512},
-    {"name": "height", "type": "number", "label": "Height", "default": 512},
-    {"name": "seed", "type": "number", "label": "Seed", "default": -1}
+    {
+      "name": "prompt",
+      "type": "string",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "steps",
+      "type": "number",
+      "label": "Steps",
+      "default": 8
+    },
+    {
+      "name": "cfg",
+      "type": "number",
+      "label": "CFG",
+      "default": 1.0
+    },
+    {
+      "name": "width",
+      "type": "number",
+      "label": "Width",
+      "default": 1024
+    },
+    {
+      "name": "height",
+      "type": "number",
+      "label": "Height",
+      "default": 1024
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1
+    }
   ]
 }
