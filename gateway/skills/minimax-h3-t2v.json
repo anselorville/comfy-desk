@@ -1,0 +1,18 @@
+{
+  "id": "minimax-h3-t2v",
+  "name": "MiniMax H3 文生视频(原生音频)",
+  "description": "MiniMax H3 开源模型文生视频:画面与立体声(对白/音效/音乐)一次生成。提示词建议按官方指南分镜描述画面、镜头运动与伴随声音。GGUF/INT8 权重栈,480P/16:9/5 秒起步。",
+  "workflow": "video_minimax_h3_t2v",
+  "tags": ["video", "t2v", "audio", "minimax", "h3"],
+  "prompt_template": "{subject}",
+  "negative_prompt_template": "{negative_prompt}",
+  "defaults": {
+    "subject": "cinematic shot, natural ambience",
+    "seed": -1
+  },
+  "fields": [
+    { "name": "subject", "type": "string", "label": "Subject", "default": "" },
+    { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
+  ],
+  "created_at": "2026-08-22T00:00:00+00:00"
+}
