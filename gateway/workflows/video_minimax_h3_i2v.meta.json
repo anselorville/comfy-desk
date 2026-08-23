@@ -1,0 +1,30 @@
+{
+  "name": "Video MiniMax H3 I2V (首帧图生视频)",
+  "description": "MiniMax H3 图生视频:上传参考图作为视频首帧(角色/场景属性由图锚定),画面+原生立体声一次生成。按官方模板验证配置:20 步、768P 16:9 画布、标准注意力。权重栈为 Turing 适配版(INT8 DiT 原生 + Qwen3-VL GGUF TE)。预计单张 30-60 分钟。提示词描述图中内容的运动与镜头:场景→镜头→声音。",
+  "fields": [
+    {
+      "name": "prompt",
+      "type": "string",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "image_filename",
+      "type": "string",
+      "label": "首帧图片(网关上传后注入)",
+      "default": ""
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1
+    },
+    {
+      "name": "seconds",
+      "type": "number",
+      "label": "时长(秒)",
+      "default": 5
+    }
+  ]
+}
