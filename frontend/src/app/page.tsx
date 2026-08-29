@@ -1,408 +1,525 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  generate,
-  generateAuto,
-  waitForTask,
-  listWorkflows,
-  type TaskResponse,
-  type WorkflowMeta,
-} from "@/lib/api";
+import { useState, useEffect, useRef } from "react";
+import { sendAgentChat, subscribeTaskStream, TaskResponse, Storyboard, renderShot } from "../lib/api";
 
-const ASPECT_RATIOS = [
-  { label: "1:1", w: 1024, h: 1024 },
-  { label: "3:4", w: 768, h: 1024 },
-  { label: "4:3", w: 1024, h: 768 },
-  { label: "16:9", w: 1280, h: 720 },
-  { label: "9:16", w: 720, h: 1280 },
+interface ChatMessage {
+  id: string;
+  sender: "user" | "agent";
+  text: string;
+  kind?: "image" | "video" | "storyboard" | "text";
+  taskId?: string;
+  task?: TaskResponse;
+  storyboard?: Storyboard;
+  refImage?: string;
+  createdAt: string;
+}
+
+const INSPIRATION_PROMPTS = [
+  { label: "⚡ 赛博朋克雨夜少女", prompt: "赛博朋克雨夜街道，一位身穿发光霓虹夹克的少女站在广告牌下，水面有绚丽倒影，8k电影级光影", mode: "image" as const },
+  { label: "🎬 电影镜头：海浪灯塔", prompt: "俯瞰视角，惊涛骇浪拍打着黑色悬崖上的白色灯塔，暴风雨天气，镜头缓慢向前推进", mode: "video" as const },
+  { label: "🌸 新海诚风樱花小径", prompt: "日式小镇春天，微风吹拂樱花花瓣飘落，湛蓝天空与白云，新海诚动画唯美光影", mode: "image" as const },
+  { label: "👾 复古像素地牢勇士", prompt: "16位复古像素艺术，地下城地牢深处手持发光宝剑的勇士，火把照明与暗影", mode: "image" as const },
+  { label: "🎬 3镜头科幻短片分镜", prompt: "未来都市探员在雨夜追查仿生人的3镜头悬疑分镜", mode: "storyboard" as const },
 ];
 
-const AUTO_WORKFLOW = "auto";
-
-export default function GeneratePage() {
-  const [prompt, setPrompt] = useState("");
-  const [negPrompt, setNegPrompt] = useState("");
-  const [workflow, setWorkflow] = useState(AUTO_WORKFLOW);
-  const [steps, setSteps] = useState(8);
-  const [cfg, setCfg] = useState(1);
-  const [aspectIdx, setAspectIdx] = useState(0);
-  const [seed, setSeed] = useState(-1);
-  const [loraStrength, setLoraStrength] = useState(1.0);
-  const [refFile, setRefFile] = useState<File | null>(null);
-  const [refUrl, setRefUrl] = useState("");
-  const [task, setTask] = useState<TaskResponse | null>(null);
+export default function AgentCopilotPage() {
+  const [input, setInput] = useState("");
+  const [mode, setMode] = useState<"auto" | "image" | "video" | "storyboard">("auto");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
+  const [preview, setPreview] = useState(false);
+  const [refImage, setRefImage] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [resultImages, setResultImages] = useState<string[]>([]);
-  const [workflows, setWorkflows] = useState<WorkflowMeta[]>([]);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      sender: "agent",
+      text: "👋 你好！我是你的 ComfyUI 智能创作导演。\n你无需手动连线或调参，直接用自然语言告诉我你的想法（例如「帮我画一张...」或「做一段运镜视频...」），我会自动编排最合适的工作流并调度显卡完成制作！",
+      kind: "text",
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    },
+  ]);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    listWorkflows().then(setWorkflows).catch(console.error);
-  }, []);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-  const isAuto = workflow === AUTO_WORKFLOW;
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRefImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
-  /* 选择显式工作流时,回填该工作流 meta 里的规范参数 */
-  const pickWorkflow = useCallback(
-    (id: string) => {
-      setWorkflow(id);
-      if (id === AUTO_WORKFLOW) return;
-      const meta = workflows.find((w) => w.id === id);
-      if (!meta?.fields) return;
-      for (const f of meta.fields) {
-        if (f.default === "" || f.default == null) continue;
-        if (f.name === "steps") setSteps(Number(f.default));
-        else if (f.name === "cfg") setCfg(Number(f.default));
-        else if (f.name === "seed") setSeed(Number(f.default));
-        else if (f.name === "lora_strength") setLoraStrength(Number(f.default));
-      }
-    },
-    [workflows]
-  );
+  const handleSend = async (customText?: string, customMode?: "auto" | "image" | "video" | "storyboard") => {
+    const textToSend = customText || input;
+    if (!textToSend.trim() || loading) return;
 
-  const hasLoraField = useMemo(
-    () =>
-      !isAuto &&
-      !!workflows.find((w) => w.id === workflow)?.fields?.some(
-        (f) => f.name === "lora_strength"
-      ),
-    [isAuto, workflow, workflows]
-  );
+    const currentMode = customMode || mode;
+    const userMsgId = `user_${Date.now()}`;
+    const agentMsgId = `agent_${Date.now()}`;
 
-  const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) return;
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      sender: "user",
+      text: textToSend,
+      refImage: refImage || undefined,
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
     setLoading(true);
-    setTask(null);
-    setResultImages([]);
 
     try {
-      const ar = ASPECT_RATIOS[aspectIdx];
-      let task_id: string;
-      if (isAuto) {
-        ({ task_id } = await generateAuto({
-          prompt: prompt.trim(),
-          negative_prompt: negPrompt,
-          width: ar.w,
-          height: ar.h,
-          seed,
-          image: refFile ?? undefined,
-        }));
-      } else {
-        ({ task_id } = await generate({
-          prompt,
-          negative_prompt: negPrompt,
-          workflow,
-          steps,
-          cfg,
-          width: ar.w,
-          height: ar.h,
-          seed,
-          lora_strength: loraStrength,
-        }));
-      }
-
-      await waitForTask(task_id, (t) => {
-        setTask(t);
-        if (t.status === "done") {
-          setResultImages(t.images);
-        }
+      const res = await sendAgentChat({
+        message: textToSend,
+        ref_image: refImage || undefined,
+        mode: currentMode,
+        aspect_ratio: aspectRatio,
+        preview,
       });
-    } catch (err: unknown) {
-      console.error(err);
+
+      const agentMsg: ChatMessage = {
+        id: agentMsgId,
+        sender: "agent",
+        text: res.reply,
+        kind: res.kind || "text",
+        taskId: res.task_id,
+        storyboard: res.storyboard,
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setMessages((prev) => [...prev, agentMsg]);
+
+      // If task was submitted, subscribe to live stream
+      if (res.task_id) {
+        subscribeTaskStream(res.task_id, (updatedTask) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === agentMsgId ? { ...msg, task: updatedTask } : msg
+            )
+          );
+        });
+      }
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err_${Date.now()}`,
+          sender: "agent",
+          text: `⚠️ 执行失败: ${err.message || "未知错误"}`,
+          kind: "text",
+          createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
-  }, [prompt, negPrompt, isAuto, workflow, steps, cfg, aspectIdx, seed, loraStrength, refFile]);
+  };
 
-  const progress = task?.progress ?? 0;
-  const status = task?.status ?? "idle";
+  const handleAnimateImage = (imgSrc: string) => {
+    setRefImage(imgSrc);
+    setMode("video");
+    setInput("以这张图为首帧，让镜头缓慢推进，展现自然细腻的动态与光影变化");
+  };
+
+  const handleRenderStoryboardShot = async (sbId: string, shotId: string) => {
+    try {
+      await renderShot(sbId, shotId, preview);
+      // Update shot state to rendering
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.storyboard && msg.storyboard.id === sbId) {
+            const updatedShots = msg.storyboard.shots.map((s) =>
+              s.id === shotId ? { ...s, status: "rendering" as const, progress: 10 } : s
+            );
+            return { ...msg, storyboard: { ...msg.storyboard, shots: updatedShots } };
+          }
+          return msg;
+        })
+      );
+    } catch (e: any) {
+      alert(`渲染镜头失败: ${e.message}`);
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-        {/* ── Left panel: Controls ─────────────────────────────────────── */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="mb-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
-              AI 创作工作站
-            </h1>
-            <p className="mt-2 text-slate-500 text-sm font-medium">
-              输入您的创意，开始生成高品质 AI 图像。
-            </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      
+      {/* Top Banner / Workstation Header */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900">🤖 ComfyUI 智能创作助理 (Agent Copilot)</h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+              Ready
+            </span>
           </div>
-
-          {/* Prompt */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                正向提示词
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="一个宁静的花园，金色的阳光，电影感散景..."
-                rows={4}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                负向提示词(可留空)
-              </label>
-              <textarea
-                value={negPrompt}
-                onChange={(e) => setNegPrompt(e.target.value)}
-                rows={2}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Workflow & Aspect */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-6">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                模型选择
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setWorkflow(AUTO_WORKFLOW)}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-                    isAuto
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200"
-                      : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  ✨ 智能生成
-                </button>
-                {workflows.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => pickWorkflow(p.id)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-                      workflow === p.id
-                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
-                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-[11px] text-slate-400">
-                {isAuto ? "平台自动选择最优模型与参数，无需任何配置" : "已应用该工作流的推荐参数"}
-              </p>
-            </div>
-
-            {isAuto && (
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                角色参考图(可选 — 附图将生成以该图为首帧的锚定视频)
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  id="desktop-ref-image" type="file" accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    setRefFile(f);
-                    setRefUrl(f ? URL.createObjectURL(f) : "");
-                  }}
-                />
-                <label
-                  htmlFor="desktop-ref-image"
-                  className="text-xs px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 cursor-pointer font-bold border border-indigo-200"
-                >
-                  🖼 选择图片
-                </label>
-                {refUrl && (
-                  <span className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={refUrl} alt="参考图" className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200" />
-                    <button
-                      onClick={() => { setRefFile(null); setRefUrl(""); }}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[10px] leading-none"
-                    >✕</button>
-                  </span>
-                )}
-              </div>
-            </div>
-            )}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                画幅比例
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {ASPECT_RATIOS.map((a, i) => (
-                  <button
-                    key={a.label}
-                    onClick={() => setAspectIdx(i)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-                      aspectIdx === i
-                        ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
-                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Parameters — 仅显式工作流显示 */}
-          {!isAuto && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    步数 (Steps)
-                  </label>
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                    {steps}
-                  </span>
-                </div>
-                <input
-                  type="range" min={1} max={100} value={steps}
-                  onChange={(e) => setSteps(+e.target.value)}
-                  className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    CFG 指导
-                  </label>
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                    {cfg.toFixed(1)}
-                  </span>
-                </div>
-                <input
-                  type="range" min={1} max={20} step={0.5} value={cfg}
-                  onChange={(e) => setCfg(+e.target.value)}
-                  className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Seed
-                </label>
-                <input
-                  type="number" value={seed}
-                  onChange={(e) => setSeed(+e.target.value)}
-                  placeholder="-1 (随机)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-indigo-500 outline-none transition-all"
-                />
-              </div>
-              {hasLoraField && (
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      LoRA 权重
-                    </label>
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                      {loraStrength.toFixed(2)}
-                    </span>
-                  </div>
-                  <input
-                    type="range" min={0} max={2} step={0.05} value={loraStrength}
-                    onChange={(e) => setLoraStrength(+e.target.value)}
-                    className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !prompt.trim()}
-            className={`w-full py-4 rounded-2xl text-sm font-black tracking-widest uppercase transition-all shadow-md active:scale-[0.98] ${
-              loading || !prompt.trim()
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
-            }`}
-          >
-            {loading ? "⌛ 处理中..." : isAuto ? (refFile ? "✦ 生成锚定视频" : "✦ 智能生成") : "✦ 立即生成"}
-          </button>
+          <p className="text-xs text-slate-500 mt-1">
+            自然语言意图驱动 · 自动匹配最佳模型与运镜参数 · 支持 MiniMax H3 视频配音、Wan2.1 与 Z-Image 极速出图
+          </p>
         </div>
 
-        {/* ── Right panel: Output ─────────────────────────────────────── */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">创作画布</h2>
+        {/* Mode Selector Chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          {(["auto", "image", "video", "storyboard"] as const).map((m) => {
+            const labels = { auto: "✨ 智能识别", image: "🖼️ 极速生图", video: "🎬 电影视频", storyboard: "📖 导演分镜" };
+            return (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  mode === m
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                }`}
+              >
+                {labels[m]}
+              </button>
+            );
+          })}
+
+          <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
+          {/* Aspect Ratio Selector */}
+          <select
+            value={aspectRatio}
+            onChange={(e) => setAspectRatio(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-medium cursor-pointer"
+          >
+            <option value="16:9">16:9 宽屏</option>
+            <option value="9:16">9:16 竖屏</option>
+            <option value="1:1">1:1 方形</option>
+            <option value="4:3">4:3 复古</option>
+          </select>
+
+          {/* Fast Preview Toggle */}
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50">
+            <input
+              type="checkbox"
+              checked={preview}
+              onChange={(e) => setPreview(e.target.checked)}
+              className="rounded text-indigo-600"
+            />
+            <span>快速预览</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Main Grid: Chat Stream on Left & Canvas Feed on Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column: Chat Conversation Stream (col-span-5) */}
+        <div className="lg:col-span-5 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          
+          {/* Conversation Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+              >
+                <div className="flex items-center gap-1.5 mb-1 px-1">
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {msg.sender === "user" ? "你" : "✦ ComfyDesk Agent"}
+                  </span>
+                  <span className="text-[10px] text-slate-300">{msg.createdAt}</span>
+                </div>
+
+                <div
+                  className={`p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] ${
+                    msg.sender === "user"
+                      ? "bg-indigo-600 text-white rounded-tr-xs"
+                      : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-xs shadow-2xs"
+                  }`}
+                >
+                  {/* If user attached image */}
+                  {msg.refImage && (
+                    <div className="mb-2 rounded-xl overflow-hidden border border-white/20">
+                      <img src={msg.refImage} alt="Reference" className="max-h-32 object-cover w-full" />
+                    </div>
+                  )}
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+
             {loading && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 animate-pulse">
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest">{status === "running" ? "渲染中" : "入队中"}</span>
+              <div className="flex items-start gap-2">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-xs text-xs text-indigo-600 font-medium flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></div>
+                  <span>Agent 正在规划工作流与调度 GPU...</span>
+                </div>
               </div>
             )}
+            <div ref={chatEndRef} />
           </div>
 
-          {/* Output Card */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm min-h-[600px] flex flex-col relative overflow-hidden">
-            {loading && (
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-50 overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 transition-all duration-500 ease-out"
-                  style={{ width: `${progress}%` }}
-                ></div>
+          {/* Inspiration Prompts Bar */}
+          <div className="p-2.5 bg-slate-50/80 border-t border-slate-200 flex items-center gap-2 overflow-x-auto custom-scrollbar">
+            <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap pl-1">灵感:</span>
+            {INSPIRATION_PROMPTS.map((insp, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setInput(insp.prompt);
+                  setMode(insp.mode);
+                }}
+                className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-slate-600 whitespace-nowrap transition-colors cursor-pointer"
+              >
+                {insp.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Input Box & Attachment */}
+          <div className="p-3 bg-white border-t border-slate-200">
+            {refImage && (
+              <div className="mb-2 flex items-center justify-between p-2 rounded-xl bg-indigo-50 border border-indigo-100">
+                <div className="flex items-center gap-2">
+                  <img src={refImage} alt="Ref" className="w-8 h-8 rounded-lg object-cover" />
+                  <span className="text-[11px] font-semibold text-indigo-900">已附参考图（用于首帧运镜或图生图）</span>
+                </div>
+                <button
+                  onClick={() => setRefImage("")}
+                  className="text-xs text-indigo-400 hover:text-indigo-700 font-bold px-1.5"
+                >
+                  ✕
+                </button>
               </div>
             )}
 
-            {resultImages.length > 0 ? (
-              <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[800px] pr-2">
-                {resultImages.map((src, idx) => {
-                  const isVideo = /\.(mp4|webm)$/i.test(src);
-                  return (
-                  <div key={idx} className="group relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition-all hover:shadow-xl">
-                    {isVideo ? (
-                      <video src={src} controls playsInline className="w-full block bg-black" />
-                    ) : (
-                      <img src={src} alt="Generated" className="w-full block" />
-                    )}
-                    <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <a
-                        href={src} download
-                        className="px-4 py-2 bg-white/90 backdrop-blur text-indigo-700 text-xs font-black rounded-xl shadow-lg border border-white hover:bg-white transition-colors uppercase tracking-widest"
-                      >
-                        下载
-                      </a>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            ) : !loading ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-slate-300">
-                <div className="w-20 h-20 rounded-full border-4 border-slate-50 flex items-center justify-center text-4xl">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="上传参考图 / 角色图"
+                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+              >
+                🖼️
+              </button>
+
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder="描述你想要的画面、镜头运动或分镜剧情..."
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+              />
+
+              <button
+                type="button"
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim()}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all shadow-xs ${
+                  loading || !input.trim()
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+                }`}
+              >
+                {loading ? "处理中..." : "发送 ✦"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Live Visual Canvas & Storyboard Gallery (col-span-7) */}
+        <div className="lg:col-span-7 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          
+          {/* Header */}
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-slate-900">创作画布与作品流 (Visual Output Feed)</span>
+              <span className="text-xs text-slate-400 font-mono">Real-time</span>
+            </div>
+          </div>
+
+          {/* Main Visual Stream */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar bg-slate-50/30">
+            {messages.filter((m) => m.task || m.storyboard).length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 py-12">
+                <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center text-2xl text-slate-300 mb-3">
                   ✦
                 </div>
-                <p className="text-sm font-semibold tracking-wide text-slate-400">
-                  准备就绪，尽情挥洒创意
+                <p className="text-sm font-semibold text-slate-500">等待生成任务</p>
+                <p className="text-xs text-slate-400 max-w-sm text-center mt-1">
+                  在左侧对话框输入您的创作意图，生成的图像、5秒视频及多镜头分镜将实时在此呈现。
                 </p>
               </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center gap-6">
-                    <div className="relative">
-                        <div className="w-24 h-24 border-8 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center font-black text-indigo-600">
-                            {progress}%
-                        </div>
-                    </div>
-                    <p className="text-sm font-black text-indigo-600 animate-pulse tracking-widest uppercase">图像合成中</p>
-                </div>
-            )}
+              messages
+                .filter((m) => m.task || m.storyboard)
+                .map((msg) => {
+                  const task = msg.task;
+                  const sb = msg.storyboard;
 
-            {task?.error && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-                <span className="text-red-500 text-lg">⚠️</span>
-                <div>
-                    <h4 className="text-xs font-black text-red-700 uppercase tracking-widest">错误详情</h4>
-                    <p className="text-xs text-red-600 mt-1">{task.error}</p>
-                </div>
-              </div>
+                  // Render Single Generation Task (Image or Video)
+                  if (task) {
+                    const isRunning = task.status === "running" || task.status === "pending";
+                    const isDone = task.status === "done";
+                    const images = task.images || [];
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 overflow-hidden transition-all hover:border-slate-300"
+                      >
+                        {/* Task Card Header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                                isDone
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : task.status === "failed"
+                                  ? "bg-red-50 text-red-700 border border-red-200"
+                                  : "bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse"
+                              }`}
+                            >
+                              {isDone ? "✓ 渲染完成" : task.status === "failed" ? "✕ 失败" : `渲染中 ${task.progress}%`}
+                            </span>
+                            <span className="text-xs text-slate-500 font-medium truncate max-w-xs">{msg.text}</span>
+                          </div>
+
+                          {images.length > 0 && (
+                            <a
+                              href={`/images/${images[0]}`}
+                              download
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100"
+                            >
+                              ⬇ 下载原片
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Progress Bar */}
+                        {isRunning && (
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 mb-3 overflow-hidden">
+                            <div
+                              className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                              style={{ width: `${task.progress}%` }}
+                            ></div>
+                          </div>
+                        )}
+
+                        {/* Media Display */}
+                        {images.length > 0 ? (
+                          <div className="space-y-3">
+                            {images.map((src, i) => {
+                              const fullUrl = `/images/${src}`;
+                              const isVideo = /\.(mp4|webm)$/i.test(src);
+                              return (
+                                <div key={i} className="group relative rounded-xl overflow-hidden border border-slate-200 bg-black">
+                                  {isVideo ? (
+                                    <video src={fullUrl} controls playsInline autoPlay muted loop className="w-full max-h-[420px] object-contain mx-auto block" />
+                                  ) : (
+                                    <img src={fullUrl} alt="Output" className="w-full max-h-[420px] object-contain mx-auto block" />
+                                  )}
+
+                                  {/* Action overlay for images -> make into video */}
+                                  {!isVideo && (
+                                    <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                      <span className="text-[11px] text-slate-500">Z-Image Turbo 8K</span>
+                                      <button
+                                        onClick={() => handleAnimateImage(fullUrl)}
+                                        className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-lg shadow-xs cursor-pointer active:scale-95 transition-all"
+                                      >
+                                        🎬 转换为5秒运镜视频 ✦
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : isRunning ? (
+                          <div className="h-64 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3">
+                            <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                            <p className="text-xs font-semibold text-slate-600">ComfyUI 引擎正在生成中 ({task.progress}%)...</p>
+                          </div>
+                        ) : null}
+
+                        {task.error && (
+                          <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+                            <strong>渲染错误:</strong> {task.error}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Render Multi-shot Storyboard Plan
+                  if (sb) {
+                    return (
+                      <div key={msg.id} className="bg-white rounded-2xl border border-indigo-200 shadow-sm p-4 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-base font-extrabold text-slate-900">🎬 导演分镜计划: {sb.title}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+                                {sb.shots.length} 个镜头 · {sb.aspect_ratio}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">{sb.synopsis}</p>
+                          </div>
+                        </div>
+
+                        {/* Shot Cards Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {sb.shots.map((shot) => (
+                            <div
+                              key={shot.id}
+                              className="rounded-xl border border-slate-200 p-3 bg-slate-50/50 flex flex-col justify-between gap-2"
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-bold text-slate-900">
+                                    镜头 #{shot.shot_number}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 font-semibold">
+                                    {shot.camera_movement}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-semibold text-slate-700 block">{shot.shot_type}</span>
+                                <p className="text-[11px] text-slate-500 mt-1 leading-snug">{shot.scene_description}</p>
+                              </div>
+
+                              {shot.video_url ? (
+                                <video src={shot.video_url} controls playsInline loop className="w-full rounded-lg bg-black mt-2" />
+                              ) : (
+                                <button
+                                  onClick={() => handleRenderStoryboardShot(sb.id, shot.id)}
+                                  disabled={shot.status === "rendering"}
+                                  className="w-full py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all shadow-xs"
+                                >
+                                  {shot.status === "rendering" ? "渲染中..." : "渲染此镜头 🎬"}
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })
             )}
           </div>
         </div>

@@ -1,299 +1,279 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { sendAgentChat, subscribeTaskStream, TaskResponse, GpuTelemetry, fetchGpuTelemetry } from "../../lib/api";
 
-/* API 基址:经 HTTPS 边缘时同源相对路径;直连 :3000 开发时走网关绝对地址 */
-function apiBase(): string {
-  if (process.env.NEXT_PUBLIC_STUDIO_API) {
-    return process.env.NEXT_PUBLIC_STUDIO_API.replace(/\/+$/, "");
-  }
-  const loc = window.location;
-  return loc.port === "3000" ? `${loc.protocol}//${loc.hostname}:8001/api/v1` : "/api/v1";
-}
-
-function mediaOrigin(): string {
-  if (process.env.NEXT_PUBLIC_STUDIO_API) {
-    return process.env.NEXT_PUBLIC_STUDIO_API.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
-  }
-  const loc = window.location;
-  return loc.port === "3000" ? `${loc.protocol}//${loc.hostname}:8001` : "";
-}
-
-type Req = {
+interface MobileTaskItem {
   id: string;
-  message: string;
-  ref_image: string;
-  status: string;
-  detail: string;
+  text: string;
+  taskId?: string;
+  status: "pending" | "running" | "done" | "failed";
   progress: number;
-  result_url: string;
-  created_at: string;
-};
-
-/* 负向提示为用户偏好:可空但必须存在(高级折叠内) */
-
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  queued:    { label: "排队中",   cls: "bg-slate-100 text-slate-600" },
-  thinking:  { label: "AI 规划中", cls: "bg-blue-50 text-blue-700 animate-pulse" },
-  submitted: { label: "已提交",   cls: "bg-indigo-50 text-indigo-700" },
-  running:   { label: "生成中",   cls: "bg-blue-100 text-blue-700" },
-  done:      { label: "已完成",   cls: "bg-emerald-50 text-emerald-700" },
-  failed:    { label: "失败",     cls: "bg-red-50 text-red-700" },
-};
-
-function resolveMedia(url: string): string {
-  return /^https?:/.test(url) ? url : `${mediaOrigin()}${url}`;
+  mediaUrl?: string;
+  isVideo?: boolean;
+  error?: string;
+  createdAt: string;
 }
 
-function urlB64ToUint8Array(b64: string) {
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-}
+export default function MobilePage() {
+  const [input, setInput] = useState("");
+  const [mode, setMode] = useState<"auto" | "video" | "image" | "storyboard">("auto");
+  const [refImage, setRefImage] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [gpu, setGpu] = useState<GpuTelemetry | null>(null);
+  const [tasks, setTasks] = useState<MobileTaskItem[]>([]);
 
-export default function StudioPage() {
-  const [requests, setRequests] = useState<Req[]>([]);
-  const [message, setMessage] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
-  const [preview, setPreview] = useState(false);
-  const [negPrompt, setNegPrompt] = useState("");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [notifOn, setNotifOn] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* SSE live feed */
   useEffect(() => {
-    const es = new EventSource(`${apiBase()}/studio/events`);
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
-    es.onmessage = (e) => {
-      const evt = JSON.parse(e.data);
-      if (evt.type === "snapshot") {
-        setRequests(evt.requests);
-        return;
-      }
-      if (evt.type === "request") {
-        setRequests((prev) => {
-          const i = prev.findIndex((r) => r.id === evt.request.id);
-          const next = i >= 0
-            ? prev.map((r) => (r.id === evt.request.id ? evt.request : r))
-            : [evt.request, ...prev];
-          return [...next].sort((a, b) => b.created_at.localeCompare(a.created_at));
-        });
-      }
+    fetchGpuTelemetry().then(setGpu).catch(console.error);
+    const t = setInterval(() => {
+      fetchGpuTelemetry().then(setGpu).catch(() => {});
+    }, 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRefImage(reader.result as string);
     };
-    return () => es.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    reader.readAsDataURL(file);
+  };
 
-  /* service worker + resume notification state */
-  useEffect(() => {
-    if ("serviceWorker" in navigator)
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    if (typeof Notification !== "undefined" && Notification.permission === "granted")
-      setNotifOn(true);
-  }, []);
+  const handleCreate = async () => {
+    if (!input.trim() || loading) return;
+    const currentInput = input;
+    const currentRef = refImage;
+    setInput("");
+    setRefImage("");
+    setLoading(true);
 
-  const submit = useCallback(async () => {
-    if (!message.trim() || submitting) return;
-    setSubmitting(true);
+    const localId = `m_task_${Date.now()}`;
+    const newTask: MobileTaskItem = {
+      id: localId,
+      text: currentInput,
+      status: "pending",
+      progress: 10,
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setTasks((prev) => [newTask, ...prev]);
+
     try {
-      const fd = new FormData();
-      fd.append("message", message.trim());
-      fd.append("preview", String(preview));
-      fd.append("negative_prompt", negPrompt);
-      if (imageFile) fd.append("image", imageFile);
-      const res = await fetch(`${apiBase()}/studio/requests`, { method: "POST", body: fd });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? res.statusText);
-      setMessage("");
-      setImageFile(null);
-      setImageUrl("");
-      if (fileRef.current) fileRef.current.value = "";
-    } finally {
-      setSubmitting(false);
-    }
-  }, [message, imageFile, preview, submitting]);
-
-  const enableNotifications = useCallback(async () => {
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") return;
-      setNotifOn(true);
-      const reg = await navigator.serviceWorker.ready;
-      const { publicKey } = await fetch(`${apiBase()}/studio/push/vapid`).then((r) => r.json());
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub)
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlB64ToUint8Array(publicKey),
-        });
-      await fetch(`${apiBase()}/studio/push/subscribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub.toJSON()),
+      const res = await sendAgentChat({
+        message: currentInput,
+        ref_image: currentRef || undefined,
+        mode: mode,
+        aspect_ratio: "9:16", // default to vertical on mobile
+        preview: false,
       });
-    } catch (err) {
-      console.error("push subscribe failed", err);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  const pickImage = useCallback((f: File | null) => {
-    setImageFile(f);
-    setImageUrl(f ? URL.createObjectURL(f) : "");
-  }, []);
+      if (res.task_id) {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === localId ? { ...t, taskId: res.task_id, status: "running" } : t))
+        );
+
+        subscribeTaskStream(res.task_id, (updatedTask: TaskResponse) => {
+          setTasks((prev) =>
+            prev.map((t) => {
+              if (t.taskId === res.task_id) {
+                const images = updatedTask.images || [];
+                const firstImg = images[0];
+                const isVideo = firstImg ? /\.(mp4|webm)$/i.test(firstImg) : false;
+                return {
+                  ...t,
+                  status: updatedTask.status,
+                  progress: updatedTask.progress,
+                  mediaUrl: firstImg ? `/images/${firstImg}` : t.mediaUrl,
+                  isVideo,
+                  error: updatedTask.error || undefined,
+                };
+              }
+              return t;
+            })
+          );
+        });
+      }
+    } catch (e: any) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === localId ? { ...t, status: "failed", error: e.message } : t))
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="max-w-md mx-auto px-4 pb-16">
-      {/* header */}
-      <header className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      
+      {/* Sticky Mobile App Bar */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold tracking-tight text-slate-900">ComfyDesk</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 font-semibold">
-            Studio
-          </span>
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
+            ✦
+          </div>
+          <span className="font-extrabold text-sm text-slate-900 tracking-tight">ComfyDesk 随身版</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-block w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300 animate-pulse"}`}
-            title={connected ? "实时连接" : "连接中"}
-          />
-          {!notifOn && (
-            <button
-              onClick={enableNotifications}
-              className="text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-            >
-              开启通知
-            </button>
-          )}
-        </div>
+
+        {gpu && gpu.available && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>22G 在线 · {gpu.temperature_c}°C</span>
+          </div>
+        )}
       </header>
 
-      {/* composer */}
-      <section className="mt-4 bg-white ring-1 ring-slate-200 shadow-sm rounded-2xl p-4">
-        <label className="block text-sm font-medium text-slate-700 mb-2">描述你想要的视频</label>
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={3}
-          placeholder="例:让这个角色缓缓转头看向镜头,微笑,背景轻微虚化…"
-          className="w-full text-sm rounded-xl border border-slate-200 p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none placeholder:text-slate-400"
-        />
-        <div className="flex items-center gap-3 mt-3">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
-            id="ref-image"
-          />
-          <label
-            htmlFor="ref-image"
-            className="text-xs px-3 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer font-medium"
-          >
-            🖼 角色参考图
-          </label>
-          {imageUrl && (
-            <span className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt="参考图" className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200" />
-              <button
-                onClick={() => pickImage(null)}
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[10px] leading-none"
-              >
-                ✕
-              </button>
-            </span>
-          )}
-          <label className="ml-auto flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={preview}
-              onChange={(e) => setPreview(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            快速预览
-          </label>
-        </div>
-        {advancedOpen && (
-        <div className="mt-3">
-          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            负向提示词(可留空)
-          </label>
-          <textarea
-            value={negPrompt}
-            onChange={(e) => setNegPrompt(e.target.value)}
-            rows={2}
-            placeholder="不希望出现的元素…"
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none placeholder:text-slate-400"
-          />
-        </div>
-        )}
-        <button
-          onClick={() => setAdvancedOpen((v) => !v)}
-          className="mt-2 text-[11px] text-slate-400 hover:text-slate-600"
-        >
-          {advancedOpen ? "收起高级选项 ▲" : "高级选项 ▼"}
-        </button>
-        <button
-          onClick={submit}
-          disabled={!message.trim() || submitting}
-          className="mt-3 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-medium transition-colors"
-        >
-          {submitting ? "提交中…" : "生成视频"}
-        </button>
-      </section>
+      {/* Main Content Stream */}
+      <div className="max-w-md mx-auto px-4 py-4 space-y-4">
+        
+        {/* Mobile Composer Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-3">
+          
+          {/* Mode Switcher */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {(["auto", "video", "image", "storyboard"] as const).map((m) => {
+              const labels = { auto: "✨ 智能识别", video: "🎬 运镜视频", image: "🖼️ 极速生图", storyboard: "📖 导演分镜" };
+              return (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    mode === m
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {labels[m]}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* request list */}
-      <section className="mt-6 space-y-4">
-        {requests.length === 0 && (
-          <p className="text-center text-xs text-slate-400 mt-10">还没有请求 · 在上方提交第一条</p>
-        )}
-        {requests.map((r) => {
-          const meta = STATUS_META[r.status] ?? STATUS_META.queued;
-          const busy = r.status === "thinking" || r.status === "running";
-          const mediaSrc = r.result_url ? resolveMedia(r.result_url) : "";
-          return (
-            <article key={r.id} className="bg-white ring-1 ring-slate-200 shadow-sm rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.cls}`}>{meta.label}</span>
-                <time className="text-xs text-slate-400">{r.created_at.slice(5, 16).replace("T", " ")}</time>
+          {/* Reference Image Preview if present */}
+          {refImage && (
+            <div className="relative rounded-xl overflow-hidden border border-slate-200 max-h-28 bg-black flex items-center justify-center">
+              <img src={refImage} alt="Reference" className="max-h-28 object-contain" />
+              <button
+                onClick={() => setRefImage("")}
+                className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold"
+              >
+                ✕ 移除
+              </button>
+            </div>
+          )}
+
+          {/* Input Textarea */}
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            rows={3}
+            placeholder="说出你想生成的画面或运镜动作..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
+          />
+
+          {/* Controls Bar */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+            >
+              <span>📷</span>
+              <span>拍照/选图</span>
+            </button>
+
+            <button
+              onClick={handleCreate}
+              disabled={loading || !input.trim()}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all shadow-xs ${
+                loading || !input.trim()
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+              }`}
+            >
+              {loading ? "Agent 调度中..." : "立即创作 ✦"}
+            </button>
+          </div>
+        </div>
+
+        {/* Task Cards Stream */}
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-3 overflow-hidden"
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${
+                  task.status === "done"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : task.status === "failed"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse"
+                }`}
+              >
+                {task.status === "done" ? "✓ 渲染完成" : task.status === "failed" ? "✕ 失败" : `渲染中 ${task.progress}%`}
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">{task.createdAt}</span>
+            </div>
+
+            <p className="text-xs text-slate-800 font-medium leading-relaxed">{task.text}</p>
+
+            {/* Progress Bar */}
+            {(task.status === "running" || task.status === "pending") && (
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${task.progress}%` }}
+                ></div>
               </div>
-              <p className="text-sm text-slate-800">{r.message}</p>
-              {(busy || (r.progress > 0 && r.status !== "done")) && (
-                <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 transition-[width] duration-300 ease-linear"
-                    style={{ width: `${Math.max(r.progress, 4)}%` }}
+            )}
+
+            {/* Media Player */}
+            {task.mediaUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-black">
+                {task.isVideo ? (
+                  <video
+                    src={task.mediaUrl}
+                    controls
+                    playsInline
+                    loop
+                    className="w-full max-h-[360px] object-contain mx-auto"
                   />
-                </div>
-              )}
-              {r.detail && (
-                <p className={`mt-2 text-xs ${r.status === "failed" ? "text-red-600" : "text-slate-500"}`}>
-                  {r.detail}
-                </p>
-              )}
-              {r.ref_image && <p className="mt-1 text-xs text-slate-400">🖼 已附角色参考图</p>}
-              {r.status === "done" && mediaSrc && (
-                <div className="mt-3">
-                  <video controls playsInline preload="metadata" src={mediaSrc} className="w-full rounded-xl bg-black" />
+                ) : (
+                  <img src={task.mediaUrl} alt="Result" className="w-full max-h-[360px] object-contain mx-auto" />
+                )}
+                <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-mono">{task.isVideo ? "MP4 视频" : "PNG 图像"}</span>
                   <a
-                    href={mediaSrc}
+                    href={task.mediaUrl}
                     download
-                    className="mt-2 block text-center py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                    className="px-3 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700"
                   >
-                    ⬇ 下载视频
+                    ⬇ 保存到相册
                   </a>
                 </div>
-              )}
-            </article>
-          );
-        })}
-      </section>
+              </div>
+            )}
+
+            {task.error && (
+              <div className="p-2.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium">
+                {task.error}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

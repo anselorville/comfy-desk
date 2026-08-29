@@ -1,33 +1,30 @@
 /*
- * Resolve at runtime so any LAN device can open the app:
- * - direct dev access on :3000 → gateway at <host>:8001
- * - through the HTTPS edge (:8443) → same-origin /api/v1
- * A build-time NEXT_PUBLIC_API_BASE would bake "localhost" into the bundle
- * and break every non-host device.
+ * Dynamic API Base Resolution:
+ * - Direct dev access on :3000 -> gateway at <host>:8001/api/v1
+ * - Production / Reverse Proxy -> same-origin /api/v1
  */
 function resolveApiBase(): string {
-  if (typeof window === "undefined") return "/api/v1";
+  if (typeof window === "undefined") return "http://localhost:8001/api/v1";
   const loc = window.location;
-  return loc.port === "3000"
-    ? `${loc.protocol}//${loc.hostname}:8001/api/v1`
-    : "/api/v1";
+  if (loc.port === "3000") {
+    return `${loc.protocol}//${loc.hostname}:8001/api/v1`;
+  }
+  return "/api/v1";
 }
 
 export const API_BASE = resolveApiBase();
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface GenerateRequest {
-  prompt: string;
-  negative_prompt?: string;
-  workflow?: string;
-  steps?: number;
-  cfg?: number;
-  width?: number;
-  height?: number;
-  seed?: number;
-  lora?: string;
-  lora_strength?: number;
+export interface GpuTelemetry {
+  available: boolean;
+  name: string;
+  total_mb: number;
+  used_mb: number;
+  free_mb: number;
+  utilization_pct: number;
+  temperature_c: number;
+  power_w: number;
 }
 
 export interface TaskResponse {
@@ -38,12 +35,112 @@ export interface TaskResponse {
   error: string | null;
 }
 
+export interface Artifact {
+  id: string;
+  status: string;
+  created_at: string;
+  images: string[];
+  error: string | null;
+  kind: string;
+  skill?: string;
+  workflow?: string;
+  prompt: string;
+  params: Record<string, any>;
+}
+
+export interface StoryboardShot {
+  id: string;
+  shot_number: number;
+  title: string;
+  shot_type: string;
+  camera_movement: string;
+  scene_description: string;
+  prompt: string;
+  negative_prompt?: string;
+  engine: string;
+  status: "pending" | "rendering" | "done" | "failed";
+  progress: number;
+  keyframe_url: string;
+  video_url: string;
+  task_id: string;
+  duration_sec: number;
+  error?: string;
+}
+
+export interface Storyboard {
+  id: string;
+  title: string;
+  synopsis: string;
+  style: string;
+  aspect_ratio: string;
+  status: string;
+  shots: StoryboardShot[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CameraPreset {
+  id: string;
+  label: string;
+  prompt_tag: string;
+}
+
+export interface StylePreset {
+  id: string;
+  label: string;
+  prompt_prefix: string;
+}
+
+export interface A2AChatRequest {
+  message: string;
+  ref_image?: string;
+  mode?: "auto" | "image" | "video" | "storyboard";
+  aspect_ratio?: string;
+  preview?: boolean;
+}
+
+export interface A2AChatResponse {
+  reply: string;
+  kind?: "image" | "video" | "storyboard";
+  task_id?: string;
+  workflow?: string;
+  status?: string;
+  storyboard?: Storyboard;
+  poll_url?: string;
+  stream_url?: string;
+}
+
+export interface GenerateRequest {
+  prompt: string;
+  negative_prompt?: string;
+  workflow?: string;
+  steps?: number;
+  cfg?: number;
+  width?: number;
+  height?: number;
+  seed?: number;
+  length?: number;
+}
+
 export interface CaptionResponse {
   caption: string;
   style: string;
 }
 
-// ── API helpers ────────────────────────────────────────────────────────────────
+export interface DatasetImage {
+  id: string;
+  filename: string;
+  has_caption: boolean;
+  size: number;
+}
+
+export interface WorkflowMeta {
+  id: string;
+  name: string;
+  fields: { name: string; type: string; label: string; default: any }[];
+}
+
+// ── System & Telemetry APIs ───────────────────────────────────────────────────
 
 export async function fetchSystemMode(): Promise<{ mode: string }> {
   try {
@@ -55,6 +152,102 @@ export async function fetchSystemMode(): Promise<{ mode: string }> {
   }
 }
 
+export async function fetchGpuTelemetry(): Promise<GpuTelemetry> {
+  try {
+    const res = await fetch(`${API_BASE}/system/gpu`);
+    if (!res.ok) throw new Error(await res.text());
+    return await res.json();
+  } catch (e) {
+    return {
+      available: false,
+      name: "GPU Standby",
+      total_mb: 22528,
+      used_mb: 0,
+      free_mb: 22528,
+      utilization_pct: 0,
+      temperature_c: 0,
+      power_w: 0,
+    };
+  }
+}
+
+export async function cleanupGpu(): Promise<{ success: boolean; gpu: GpuTelemetry }> {
+  const res = await fetch(`${API_BASE}/system/gpu-cleanup`, { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── Agent Copilot & A2A APIs ──────────────────────────────────────────────────
+
+export async function sendAgentChat(req: A2AChatRequest): Promise<A2AChatResponse> {
+  const res = await fetch(`${API_BASE}/a2a/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function fetchA2ATools(): Promise<any> {
+  const res = await fetch(`${API_BASE}/a2a/tools`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function fetchMcpManifest(): Promise<any> {
+  const res = await fetch(`${API_BASE}/a2a/mcp`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── Director & Storyboard APIs ────────────────────────────────────────────────
+
+export async function fetchDirectorPresets(): Promise<{ camera_movements: CameraPreset[]; styles: StylePreset[] }> {
+  const res = await fetch(`${API_BASE}/director/presets`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function planStoryboard(
+  synopsis: string,
+  style = "cinematic",
+  num_shots = 3,
+  aspect_ratio = "16:9"
+): Promise<Storyboard> {
+  const res = await fetch(`${API_BASE}/director/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ synopsis, style, num_shots, aspect_ratio }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function listStoryboards(): Promise<Storyboard[]> {
+  const res = await fetch(`${API_BASE}/director/storyboards`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getStoryboard(sbId: string): Promise<Storyboard> {
+  const res = await fetch(`${API_BASE}/director/storyboards/${sbId}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function renderShot(sbId: string, shotId: string, preview = false): Promise<{ task_id: string; status: string; shot_id: string }> {
+  const res = await fetch(`${API_BASE}/director/storyboards/${sbId}/shots/${shotId}/render`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preview }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── Standard Generation & Task APIs ───────────────────────────────────────────
+
 export async function generate(req: GenerateRequest): Promise<{ task_id: string }> {
   const res = await fetch(`${API_BASE}/generate`, {
     method: "POST",
@@ -65,10 +258,49 @@ export async function generate(req: GenerateRequest): Promise<{ task_id: string 
   return res.json();
 }
 
+export async function generateAuto(formData: FormData): Promise<{ task_id: string }> {
+  const res = await fetch(`${API_BASE}/generate/auto`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function pollTask(taskId: string): Promise<TaskResponse> {
   const res = await fetch(`${API_BASE}/tasks/${taskId}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+export function subscribeTaskStream(taskId: string, onProgress: (t: TaskResponse) => void): () => void {
+  const es = new EventSource(`${API_BASE}/tasks/${taskId}/stream`);
+  es.addEventListener("progress", (e) => {
+    try {
+      const task: TaskResponse = JSON.parse(e.data);
+      onProgress(task);
+      if (task.status === "done" || task.status === "failed") {
+        es.close();
+      }
+    } catch (err) {}
+  });
+  es.addEventListener("error", () => {
+    es.close();
+  });
+  return () => es.close();
+}
+
+export async function fetchArtifacts(status = "done", limit = 50): Promise<{ artifacts: Artifact[] }> {
+  const res = await fetch(`${API_BASE}/artifacts?status=${status}&limit=${limit}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function listWorkflows(): Promise<WorkflowMeta[]> {
+  const res = await fetch(`${API_BASE}/workflows`);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.workflows ?? [];
 }
 
 export async function captionImage(
@@ -84,52 +316,6 @@ export async function captionImage(
   const res = await fetch(`${API_BASE}/caption`, { method: "POST", body: form });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
-}
-
-export interface WorkflowMeta {
-  id: string;
-  name: string;
-  fields: { name: string; type: string; label: string; default: any }[];
-}
-
-export async function listWorkflows(): Promise<WorkflowMeta[]> {
-  const res = await fetch(`${API_BASE}/workflows`);
-  if (!res.ok) throw new Error(await res.text());
-  const data = await res.json();
-  return data.workflows ?? [];
-}
-
-/** Poll until done/failed, calling onProgress each tick. */
-export async function waitForTask(
-  taskId: string,
-  onProgress: (t: TaskResponse) => void
-): Promise<TaskResponse> {
-  return new Promise((resolve, reject) => {
-    const es = new EventSource(`${API_BASE}/tasks/${taskId}/stream`);
-    es.addEventListener("progress", (e) => {
-      try {
-        const task: TaskResponse = JSON.parse(e.data);
-        onProgress(task);
-        if (task.status === "done" || task.status === "failed") {
-          es.close();
-          resolve(task);
-        }
-      } catch (err) {}
-    });
-    es.addEventListener("error", (e) => {
-      es.close();
-      reject(new Error("Stream error"));
-    });
-  });
-}
-
-// ── Dataset & Training APIs ────────────────────────────────────────────────────
-
-export interface DatasetImage {
-  id: string;
-  filename: string;
-  has_caption: boolean;
-  size: number;
 }
 
 export async function fetchDatasetImages(): Promise<DatasetImage[]> {
@@ -169,29 +355,4 @@ export async function startTraining(epochLimit: number, learningRate: number): P
     body: JSON.stringify({ epoch_limit: epochLimit, learning_rate: learningRate }),
   });
   if (!res.ok) throw new Error(await res.text());
-}
-
-export interface AutoGenerateRequest {
-  prompt: string;
-  negative_prompt?: string;
-  width?: number;
-  height?: number;
-  seed?: number;
-  image?: File;
-}
-
-export async function generateAuto(req: AutoGenerateRequest): Promise<{ task_id: string }> {
-  const fd = new FormData();
-  fd.append("prompt", req.prompt);
-  if (req.negative_prompt) fd.append("negative_prompt", req.negative_prompt);
-  if (req.width) fd.append("width", String(req.width));
-  if (req.height) fd.append("height", String(req.height));
-  if (req.seed !== undefined) fd.append("seed", String(req.seed));
-  if (req.image) fd.append("image", req.image);
-  const res = await fetch(`${API_BASE}/generate/auto`, {
-    method: "POST",
-    body: fd,
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
 }

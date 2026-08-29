@@ -33,19 +33,29 @@ def touch() -> None:
 async def _maybe_free() -> bool:
     """Unload models iff queue is empty AND idle threshold exceeded."""
     base = settings.comfyui_url.rstrip("/")
-    async with httpx.AsyncClient(timeout=15) as client:
-        queue = (await client.get(f"{base}/queue")).json()
-        if queue.get("queue_running") or queue.get("queue_pending"):
-            touch()  # 引擎还在干活,不算空闲
-            return False
-        if time.monotonic() - _last_touch < IDLE_SEC:
-            return False
-        resp = await client.post(
-            f"{base}/free", json={"unload_models": True, "free_memory": True}
-        )
-        resp.raise_for_status()
-    logger.info("GPU 空闲超过 %ss,已卸载模型并释放显存", IDLE_SEC)
-    return True
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{base}/queue")
+            if resp.status_code != 200:
+                return False
+            queue = resp.json()
+            if queue.get("queue_running") or queue.get("queue_pending"):
+                touch()
+                return False
+            if time.monotonic() - _last_touch < IDLE_SEC:
+                return False
+            f_resp = await client.post(
+                f"{base}/free", json={"unload_models": True, "free_memory": True}
+            )
+            f_resp.raise_for_status()
+            logger.info("GPU 空闲超过 %ss,已卸载模型并释放显存", IDLE_SEC)
+            return True
+    except (httpx.ConnectError, httpx.TimeoutException):
+        # ComfyUI is not reachable or stopped
+        return False
+    except Exception as e:
+        logger.debug("GPU watchdog notice: %s", e)
+        return False
 
 
 async def _loop() -> None:
@@ -53,7 +63,7 @@ async def _loop() -> None:
         try:
             await _maybe_free()
         except Exception:
-            logger.exception("gpu watchdog tick failed")
+            pass
         await asyncio.sleep(CHECK_INTERVAL)
 
 
