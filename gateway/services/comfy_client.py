@@ -162,3 +162,73 @@ async def get_system_stats() -> dict[str, Any]:
         resp = await client.get(f"{_COMFYUI_BASE}/system_stats")
         resp.raise_for_status()
         return resp.json()
+
+import base64
+import shutil
+import uuid
+from pathlib import Path
+
+async def ensure_image_in_input(ref_image: str) -> str:
+    """Ensure reference image is present in ComfyUI's input directory and return the stored filename."""
+    if not ref_image:
+        return ""
+    
+    # Root of repo -> comfy-ui/input and comfy-ui/output
+    repo_root = Path(__file__).parent.parent.parent
+    input_dir = repo_root / "comfy-ui" / "input"
+    output_dir = repo_root / "comfy-ui" / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 1. Base64 Data URI (e.g. data:image/png;base64,...)
+    if ref_image.startswith("data:"):
+        try:
+            header, data_str = ref_image.split(",", 1)
+            ext = "png"
+            if "jpeg" in header or "jpg" in header:
+                ext = "jpg"
+            elif "webp" in header:
+                ext = "webp"
+            img_bytes = base64.b64decode(data_str)
+            fn = f"upload_{uuid.uuid4().hex[:8]}.{ext}"
+            (input_dir / fn).write_bytes(img_bytes)
+            logger.info("Saved base64 ref image to input/%s", fn)
+            return fn
+        except Exception as e:
+            logger.error("Failed to decode base64 image: %s", e)
+            return ""
+
+    # 2. Filename or path (e.g. /images/copilot_img_xxx.png or copilot_img_xxx.png)
+    raw_fn = ref_image.split("?")[0].split("/")[-1].strip()
+    if not raw_fn:
+        return ""
+    
+    # Check if already in input_dir
+    target_input = input_dir / raw_fn
+    if target_input.exists() and target_input.stat().st_size > 0:
+        return raw_fn
+        
+    # Check if in output_dir
+    target_output = output_dir / raw_fn
+    if target_output.exists() and target_output.stat().st_size > 0:
+        shutil.copy2(target_output, target_input)
+        logger.info("Copied output/%s -> input/%s", raw_fn, raw_fn)
+        return raw_fn
+        
+    # Check if it has subfolder path in output
+    for found in output_dir.rglob(raw_fn):
+        if found.is_file() and found.stat().st_size > 0:
+            shutil.copy2(found, target_input)
+            logger.info("Copied recursive output/%s -> input/%s", found.name, raw_fn)
+            return raw_fn
+            
+    # Try fetching bytes via comfy_client view API
+    try:
+        data = await get_image_bytes(raw_fn)
+        if data:
+            target_input.write_bytes(data)
+            logger.info("Downloaded %s via /view -> input/%s", raw_fn, raw_fn)
+            return raw_fn
+    except Exception as e:
+        logger.warning("Could not fetch image %s into input: %s", raw_fn, e)
+
+    return raw_fn

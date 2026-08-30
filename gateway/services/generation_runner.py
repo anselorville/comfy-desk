@@ -3,7 +3,7 @@ Shared generation task runner.
 
 Executes a workflow template against a params dict (sentinel names:
 positive_prompt, negative_prompt, steps, cfg, width, height, seed,
-lora, lora_strength, filename_prefix) and tracks progress in the task store.
+lora, lora_strength, filename_prefix, image_filename) and tracks progress in the task store.
 Used by both POST /api/v1/generate and the skill run endpoints.
 """
 import asyncio
@@ -28,6 +28,12 @@ async def run_generation_task(task_id: str, workflow_name: str, params: dict) ->
         if not isinstance(seed, int) or seed < 0:
             seed = int(uuid.uuid4().int % 2**32)
         params = {**params, "seed": seed}
+
+        # If workflow expects an image_filename (I2V / Inpaint / Ref), ensure file exists in ComfyUI input/
+        if params.get("image_filename"):
+            clean_fn = await comfy_client.ensure_image_in_input(params["image_filename"])
+            if clean_fn:
+                params["image_filename"] = clean_fn
 
         wf = load_workflow(workflow_name)
         wf = inject_params(wf, params)
