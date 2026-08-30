@@ -35,7 +35,7 @@ export default function AgentCopilotPage() {
     {
       id: "welcome",
       sender: "agent",
-      text: "👋 你好！我是你的 ComfyUI 智能创作导演。\n你无需手动连线或调参，直接用自然语言告诉我你的想法（例如「帮我画一张...」或「做一段运镜视频...」），我会自动编排最合适的工作流并调度显卡完成制作！",
+      text: "👋 你好！我是你的 ComfyUI 智能创作导演。\n直接告诉我你的画面或视频构想（例如「帮我画一张...」或「做一段运镜视频...」），我会自动编排最合适的工作流并调度显卡完成制作！",
       kind: "text",
       createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
@@ -134,7 +134,6 @@ export default function AgentCopilotPage() {
   const handleRenderStoryboardShot = async (sbId: string, shotId: string) => {
     try {
       await renderShot(sbId, shotId, preview);
-      // Update shot state to rendering
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.storyboard && msg.storyboard.id === sbId) {
@@ -152,62 +151,45 @@ export default function AgentCopilotPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
-      {/* Top Banner / Workstation Header */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      {/* Header Info Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">🤖 ComfyUI 智能创作助理 (Agent Copilot)</h1>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-              Ready
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            自然语言意图驱动 · 自动匹配最佳模型与运镜参数 · 支持 MiniMax H3 视频配音、Wan2.1 与 Z-Image 极速出图
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            🤖 AI 智能创作助理
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            意图驱动 · 自动调度 MiniMax H3、Wan2.1 与 Z-Image 引擎 · 支持首帧锚定运镜
           </p>
         </div>
 
-        {/* Mode Selector Chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          {(["auto", "image", "video", "storyboard"] as const).map((m) => {
-            const labels = { auto: "✨ 智能识别", image: "🖼️ 极速生图", video: "🎬 电影视频", storyboard: "📖 导演分镜" };
-            return (
+        {/* Global Quick Options */}
+        <div className="flex items-center gap-2">
+          {/* Aspect Ratio */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/60">
+            {(["16:9", "9:16", "1:1"] as const).map((ratio) => (
               <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  mode === m
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                key={ratio}
+                onClick={() => setAspectRatio(ratio)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  aspectRatio === ratio
+                    ? "bg-white text-slate-900 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {labels[m]}
+                {ratio}
               </button>
-            );
-          })}
-
-          <div className="h-4 w-px bg-slate-200 mx-1"></div>
-
-          {/* Aspect Ratio Selector */}
-          <select
-            value={aspectRatio}
-            onChange={(e) => setAspectRatio(e.target.value)}
-            className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-medium cursor-pointer"
-          >
-            <option value="16:9">16:9 宽屏</option>
-            <option value="9:16">9:16 竖屏</option>
-            <option value="1:1">1:1 方形</option>
-            <option value="4:3">4:3 复古</option>
-          </select>
+            ))}
+          </div>
 
           {/* Fast Preview Toggle */}
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-50">
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer px-2.5 py-1.5 rounded-xl bg-slate-100/70 border border-slate-200/60 hover:bg-slate-100 transition-colors">
             <input
               type="checkbox"
               checked={preview}
               onChange={(e) => setPreview(e.target.checked)}
-              className="rounded text-indigo-600"
+              className="rounded text-indigo-600 focus:ring-0"
             />
             <span>快速预览</span>
           </label>
@@ -218,7 +200,7 @@ export default function AgentCopilotPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Chat Conversation Stream (col-span-5) */}
-        <div className="lg:col-span-5 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="lg:col-span-5 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           
           {/* Conversation Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -237,8 +219,8 @@ export default function AgentCopilotPage() {
                 <div
                   className={`p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] ${
                     msg.sender === "user"
-                      ? "bg-indigo-600 text-white rounded-tr-xs"
-                      : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-xs shadow-2xs"
+                      ? "bg-slate-900 text-white rounded-tr-xs"
+                      : "bg-slate-50 border border-slate-200/80 text-slate-800 rounded-tl-xs shadow-2xs"
                   }`}
                 >
                   {/* If user attached image */}
@@ -264,8 +246,8 @@ export default function AgentCopilotPage() {
           </div>
 
           {/* Inspiration Prompts Bar */}
-          <div className="p-2.5 bg-slate-50/80 border-t border-slate-200 flex items-center gap-2 overflow-x-auto custom-scrollbar">
-            <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap pl-1">灵感:</span>
+          <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap pl-1.5">灵感:</span>
             {INSPIRATION_PROMPTS.map((insp, i) => (
               <button
                 key={i}
@@ -273,7 +255,7 @@ export default function AgentCopilotPage() {
                   setInput(insp.prompt);
                   setMode(insp.mode);
                 }}
-                className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-slate-600 whitespace-nowrap transition-colors cursor-pointer"
+                className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 border border-slate-200/70 text-slate-600 whitespace-nowrap transition-colors cursor-pointer"
               >
                 {insp.label}
               </button>
@@ -281,12 +263,33 @@ export default function AgentCopilotPage() {
           </div>
 
           {/* Input Box & Attachment */}
-          <div className="p-3 bg-white border-t border-slate-200">
+          <div className="p-3 bg-white border-t border-slate-200/80 space-y-2">
+            
+            {/* Mode selection row */}
+            <div className="flex items-center gap-1.5">
+              {(["auto", "image", "video", "storyboard"] as const).map((m) => {
+                const labels = { auto: "✨ 智能识别", image: "🖼️ 极速生图", video: "🎬 运镜视频", storyboard: "📖 导演分镜" };
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                      mode === m
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "bg-slate-100/80 text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {labels[m]}
+                  </button>
+                );
+              })}
+            </div>
+
             {refImage && (
-              <div className="mb-2 flex items-center justify-between p-2 rounded-xl bg-indigo-50 border border-indigo-100">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-indigo-50 border border-indigo-100">
                 <div className="flex items-center gap-2">
                   <img src={refImage} alt="Ref" className="w-8 h-8 rounded-lg object-cover" />
-                  <span className="text-[11px] font-semibold text-indigo-900">已附参考图（用于首帧运镜或图生图）</span>
+                  <span className="text-[11px] font-semibold text-indigo-900">已附加参考图（用于图生视频/首帧锚定）</span>
                 </div>
                 <button
                   onClick={() => setRefImage("")}
@@ -320,17 +323,17 @@ export default function AgentCopilotPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 placeholder="描述你想要的画面、镜头运动或分镜剧情..."
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none transition-all"
               />
 
               <button
                 type="button"
                 onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all shadow-xs ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                   loading || !input.trim()
                     ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+                    : "bg-slate-900 hover:bg-black text-white cursor-pointer active:scale-95 shadow-xs"
                 }`}
               >
                 {loading ? "处理中..." : "发送 ✦"}
@@ -340,24 +343,24 @@ export default function AgentCopilotPage() {
         </div>
 
         {/* Right Column: Live Visual Canvas & Storyboard Gallery (col-span-7) */}
-        <div className="lg:col-span-7 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="lg:col-span-7 flex flex-col h-[740px] bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-slate-900">创作画布与作品流 (Visual Output Feed)</span>
-              <span className="text-xs text-slate-400 font-mono">Real-time</span>
+              <span className="font-bold text-sm text-slate-900">创作画布与作品流</span>
+              <span className="text-[10px] text-slate-400 font-mono">Live Stream</span>
             </div>
           </div>
 
           {/* Main Visual Stream */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar bg-slate-50/30">
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar bg-slate-50/40">
             {messages.filter((m) => m.task || m.storyboard).length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-300 py-12">
-                <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center text-2xl text-slate-300 mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-xl text-slate-400 mb-3 shadow-2xs">
                   ✦
                 </div>
-                <p className="text-sm font-semibold text-slate-500">等待生成任务</p>
+                <p className="text-sm font-semibold text-slate-600">等待生成任务</p>
                 <p className="text-xs text-slate-400 max-w-sm text-center mt-1">
                   在左侧对话框输入您的创作意图，生成的图像、5秒视频及多镜头分镜将实时在此呈现。
                 </p>
@@ -378,13 +381,13 @@ export default function AgentCopilotPage() {
                     return (
                       <div
                         key={msg.id}
-                        className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 overflow-hidden transition-all hover:border-slate-300"
+                        className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 overflow-hidden transition-all"
                       >
                         {/* Task Card Header */}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                                 isDone
                                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                   : task.status === "failed"
@@ -394,14 +397,14 @@ export default function AgentCopilotPage() {
                             >
                               {isDone ? "✓ 渲染完成" : task.status === "failed" ? "✕ 失败" : `渲染中 ${task.progress}%`}
                             </span>
-                            <span className="text-xs text-slate-500 font-medium truncate max-w-xs">{msg.text}</span>
+                            <span className="text-xs text-slate-600 font-medium truncate max-w-xs">{msg.text}</span>
                           </div>
 
                           {images.length > 0 && (
                             <a
                               href={`/images/${images[0]}`}
                               download
-                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100"
+                              className="text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3 py-1 rounded-lg border border-slate-200 transition-colors"
                             >
                               ⬇ 下载原片
                             </a>
@@ -412,7 +415,7 @@ export default function AgentCopilotPage() {
                         {isRunning && (
                           <div className="w-full bg-slate-100 rounded-full h-1.5 mb-3 overflow-hidden">
                             <div
-                              className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                              className="bg-slate-900 h-full rounded-full transition-all duration-300"
                               style={{ width: `${task.progress}%` }}
                             ></div>
                           </div>
@@ -438,7 +441,7 @@ export default function AgentCopilotPage() {
                                       <span className="text-[11px] text-slate-500">Z-Image Turbo 8K</span>
                                       <button
                                         onClick={() => handleAnimateImage(fullUrl)}
-                                        className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-lg shadow-xs cursor-pointer active:scale-95 transition-all"
+                                        className="text-xs font-semibold text-white bg-slate-900 hover:bg-black px-3 py-1 rounded-lg shadow-xs cursor-pointer active:scale-95 transition-all"
                                       >
                                         🎬 转换为5秒运镜视频 ✦
                                       </button>
@@ -449,8 +452,8 @@ export default function AgentCopilotPage() {
                             })}
                           </div>
                         ) : isRunning ? (
-                          <div className="h-64 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3">
-                            <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                          <div className="h-64 rounded-xl bg-slate-50/50 border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3">
+                            <div className="w-7 h-7 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
                             <p className="text-xs font-semibold text-slate-600">ComfyUI 引擎正在生成中 ({task.progress}%)...</p>
                           </div>
                         ) : null}
@@ -467,12 +470,12 @@ export default function AgentCopilotPage() {
                   // Render Multi-shot Storyboard Plan
                   if (sb) {
                     return (
-                      <div key={msg.id} className="bg-white rounded-2xl border border-indigo-200 shadow-sm p-4 space-y-4">
+                      <div key={msg.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-4">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-base font-extrabold text-slate-900">🎬 导演分镜计划: {sb.title}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+                              <span className="text-base font-bold text-slate-900">🎬 导演分镜计划: {sb.title}</span>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                                 {sb.shots.length} 个镜头 · {sb.aspect_ratio}
                               </span>
                             </div>
@@ -492,7 +495,7 @@ export default function AgentCopilotPage() {
                                   <span className="text-xs font-bold text-slate-900">
                                     镜头 #{shot.shot_number}
                                   </span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 font-semibold">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">
                                     {shot.camera_movement}
                                   </span>
                                 </div>
@@ -506,7 +509,7 @@ export default function AgentCopilotPage() {
                                 <button
                                   onClick={() => handleRenderStoryboardShot(sb.id, shot.id)}
                                   disabled={shot.status === "rendering"}
-                                  className="w-full py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-all shadow-xs"
+                                  className="w-full py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-black text-white cursor-pointer transition-all shadow-2xs"
                                 >
                                   {shot.status === "rendering" ? "渲染中..." : "渲染此镜头 🎬"}
                                 </button>

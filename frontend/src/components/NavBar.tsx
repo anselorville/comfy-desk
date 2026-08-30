@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { fetchGpuTelemetry, cleanupGpu, GpuTelemetry } from "../lib/api";
 
 const NAV_LINKS = [
-  { href: "/", label: "AI 助理", icon: "✦", badge: "Agent" },
-  { href: "/director", label: "导演分镜", icon: "🎬", badge: "Director" },
-  { href: "/studio", label: "快速工位", icon: "⚡", badge: "Studio" },
-  { href: "/gallery", label: "画廊", icon: "▦", badge: "" },
-  { href: "/a2a", label: "A2A 接入", icon: "🔌", badge: "MCP" },
+  { href: "/", label: "AI 助理", icon: "✦" },
+  { href: "/director", label: "导演分镜", icon: "🎬" },
+  { href: "/studio", label: "快速工位", icon: "⚡" },
+  { href: "/gallery", label: "媒体画廊", icon: "▦" },
+  { href: "/a2a", label: "A2A 接入", icon: "🔌" },
 ];
 
 export default function NavBar() {
@@ -19,6 +19,8 @@ export default function NavBar() {
 
   const [gpu, setGpu] = useState<GpuTelemetry | null>(null);
   const [cleaning, setCleaning] = useState(false);
+  const [showGpuMenu, setShowGpuMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateGpu = async () => {
@@ -30,6 +32,17 @@ export default function NavBar() {
     updateGpu();
     const interval = setInterval(updateGpu, 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Close GPU dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowGpuMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleCleanGpu = async () => {
@@ -44,82 +57,117 @@ export default function NavBar() {
     }
   };
 
+  const vramUsedGb = gpu ? (gpu.used_mb / 1024).toFixed(1) : "0.0";
+  const vramTotalGb = gpu ? (gpu.total_mb / 1024).toFixed(0) : "22";
+  const vramPct = gpu && gpu.total_mb > 0 ? Math.round((gpu.used_mb / gpu.total_mb) * 100) : 0;
+
   return (
-    <header className="sticky top-0 z-50 glass-nav border-b border-slate-200/80 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/70 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Left: Brand & GPU Pill */}
-        <div className="flex items-center gap-4">
+        {/* Left: Minimalist Brand Identity */}
+        <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black text-lg shadow-sm shadow-indigo-200 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-xs group-hover:scale-105 transition-transform duration-200">
               ✦
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-slate-900">ComfyDesk</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                  Agent 2.0
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium">ComfyUI 智能创作工作台</p>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-base tracking-tight text-slate-900">
+                ComfyDesk
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                OS
+              </span>
             </div>
           </Link>
-
-          {/* Real-time Hardware Telemetry Pill */}
-          {gpu && gpu.available && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-semibold text-slate-700">2080Ti (22GB)</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-600">{gpu.temperature_c}°C</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-600">显存 {(gpu.used_mb / 1024).toFixed(1)}G / {(gpu.total_mb / 1024).toFixed(1)}G</span>
-              <button
-                onClick={handleCleanGpu}
-                title="卸载模型并释放显存"
-                disabled={cleaning}
-                className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 cursor-pointer active:scale-95 transition-all"
-              >
-                {cleaning ? "释放中..." : "释放显存"}
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Center / Right: Navigation Links */}
-        <div className="flex items-center gap-1.5">
+        {/* Center: Clean Segmented Navigation Control */}
+        <nav className="hidden md:flex items-center bg-slate-100/80 p-1 rounded-full border border-slate-200/60 shadow-2xs">
           {NAV_LINKS.map((link) => {
             const active = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                   active
-                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                    ? "bg-white text-slate-900 shadow-xs font-semibold"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
                 }`}
               >
-                <span>{link.icon}</span>
+                <span className="text-[11px] opacity-70">{link.icon}</span>
                 <span>{link.label}</span>
-                {link.badge && !active && (
-                  <span className="hidden sm:inline-block text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 font-semibold uppercase tracking-wider">
-                    {link.badge}
-                  </span>
-                )}
               </Link>
             );
           })}
+        </nav>
 
-          <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+        {/* Right: Hardware Telemetry Popover & Secondary Actions */}
+        <div className="flex items-center gap-3">
+          
+          {/* Discreet Hardware Status Pill */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowGpuMenu(!showGpuMenu)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-medium text-slate-700 transition-all cursor-pointer shadow-2xs active:scale-98"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-mono text-[11px] text-slate-600">2080Ti · {vramUsedGb}G/{vramTotalGb}G</span>
+              <span className="text-[10px] text-slate-400">▾</span>
+            </button>
 
-          {/* Mobile Switcher */}
+            {/* Dropdown Popover */}
+            {showGpuMenu && gpu && (
+              <div className="absolute right-0 mt-2 w-64 p-4 rounded-2xl bg-white border border-slate-200 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">{gpu.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono">Turing Architecture · 22GB Mod</p>
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    {gpu.temperature_c}°C
+                  </span>
+                </div>
+
+                {/* VRAM Progress */}
+                <div className="py-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500">显存已用 (VRAM)</span>
+                    <span className="font-mono font-semibold text-slate-800">{vramUsedGb} GB / {vramTotalGb} GB ({vramPct}%)</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        vramPct > 80 ? "bg-amber-500" : "bg-indigo-600"
+                      }`}
+                      style={{ width: `${vramPct}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Flush Action */}
+                <button
+                  onClick={handleCleanGpu}
+                  disabled={cleaning}
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>🧹</span>
+                  <span>{cleaning ? "正在释放显存..." : "卸载模型并释放显存"}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="h-4 w-px bg-slate-200 hidden sm:block"></div>
+
+          {/* Quick link to Mobile or Engine */}
           <Link
             href="/m"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-all"
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <span>📱</span>
-            <span className="hidden md:inline">移动版</span>
+            <span className="hidden sm:inline">手机端</span>
           </Link>
         </div>
       </div>
