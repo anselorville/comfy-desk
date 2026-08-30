@@ -1,127 +1,120 @@
 """
-Agent-to-Agent (A2A) Service
-Provides an intelligent mediation layer for external AI agents (Gemini CLI, DeepSeek Harness, Claude Code, etc.)
-and natural language user chat.
+A2A (Agent-to-Agent) & Agent Copilot reasoning service.
+
+Provides:
+1. Natural language intent understanding (text / image / video / storyboard).
+2. Standard tool execution (generate_image, generate_video, create_storyboard, get_system_status, gpu_cleanup).
+3. MCP (Model Context Protocol) tool schema definitions.
 """
 import asyncio
-import json
-import logging
 import uuid
 from typing import Any
 
-from config import settings
-from services import comfy_client, gpu_watchdog, llm_adapter
-from services.task_store import create_task, get_task, TaskStatus
+from services.task_store import create_task
 from services.generation_runner import run_generation_task
-from services.gpu_manager import get_gpu_telemetry, free_comfyui_memory
 from services.director_service import plan_storyboard
+from services.gpu_manager import get_gpu_telemetry, free_comfyui_memory
+from services import gpu_watchdog
 
-logger = logging.getLogger(__name__)
 
-# Standard OpenAPI / OpenAI / Gemini tool declarations
 A2A_TOOLS = [
     {
-        "type": "function",
-        "function": {
-            "name": "generate_image",
-            "description": "Generate high quality images using ComfyUI with fast Turbo inference or styled LoRAs.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "Visual scene description in English or Chinese"},
-                    "style": {
-                        "type": "string",
-                        "enum": ["photorealistic", "anime", "cyberpunk", "pixel_art", "3d_render"],
-                        "description": "Visual styling preset",
-                        "default": "photorealistic",
-                    },
-                    "aspect_ratio": {
-                        "type": "string",
-                        "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"],
-                        "default": "1:1",
-                    },
-                    "negative_prompt": {"type": "string", "default": ""},
-                    "steps": {"type": "integer", "default": 8, "description": "Inference steps (8 for Turbo, 20 for standard)"},
-                    "seed": {"type": "integer", "default": -1},
+        "name": "generate_image",
+        "description": "Generate high-resolution photorealistic, anime, pixel art, or stylised images via local ComfyUI GPU workflows.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Detailed text prompt describing visual elements, lighting, camera and scene.",
                 },
-                "required": ["prompt"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "generate_video",
-            "description": "Generate cinematic AI video with camera motion and audio using MiniMax H3 or Wan2.1.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "Scene and motion description with camera directives"},
-                    "model": {
-                        "type": "string",
-                        "enum": ["minimax_h3", "wan2.1"],
-                        "default": "minimax_h3",
-                        "description": "Video model engine (MiniMax H3 includes native stereo audio)",
-                    },
-                    "camera_movement": {
-                        "type": "string",
-                        "enum": ["dolly_in", "dolly_out", "pan_left", "pan_right", "orbit_360", "crane_up", "static_focus", "dynamic_action"],
-                        "default": "dolly_in",
-                    },
-                    "aspect_ratio": {
-                        "type": "string",
-                        "enum": ["16:9", "9:16", "1:1"],
-                        "default": "16:9",
-                    },
-                    "reference_image": {
-                        "type": "string",
-                        "description": "Optional starting image URL or filename for Image-to-Video generation",
-                    },
-                    "preview": {"type": "boolean", "default": False, "description": "Fast preview mode (480P)"},
+                "negative_prompt": {
+                    "type": "string",
+                    "description": "Negative keywords to avoid (e.g. blurry, deformed, bad anatomy).",
                 },
-                "required": ["prompt"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_storyboard",
-            "description": "Deconstruct a narrative story or script into a multi-shot cinematic video storyboard.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "synopsis": {"type": "string", "description": "Story outline or script"},
-                    "num_shots": {"type": "integer", "default": 3, "description": "Number of consecutive shots"},
-                    "style": {"type": "string", "default": "cinematic"},
-                    "aspect_ratio": {"type": "string", "default": "16:9"},
+                "style": {
+                    "type": "string",
+                    "enum": ["photorealistic", "pixel_art", "anime", "cyberpunk", "3d_render"],
+                    "description": "Visual style preset.",
                 },
-                "required": ["synopsis"],
+                "aspect_ratio": {
+                    "type": "string",
+                    "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"],
+                    "description": "Output aspect ratio (default: 1:1).",
+                },
+                "steps": {"type": "integer", "description": "Inference steps (default: 8 for Turbo)."},
+                "seed": {"type": "integer", "description": "Random seed (-1 for random)."},
             },
+            "required": ["prompt"],
         },
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_system_status",
-            "description": "Query GPU memory (22GB VRAM), active model, temperature, and queue status.",
-            "parameters": {"type": "object", "properties": {}},
+        "name": "generate_video",
+        "description": "Generate 5-second cinematic AI video clips with camera motion and native audio using MiniMax H3 or Wan2.1.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Text prompt describing scene motion, action, lighting and mood.",
+                },
+                "model": {
+                    "type": "string",
+                    "enum": ["minimax_h3", "wan22_5b"],
+                    "description": "Video model backend (default: minimax_h3).",
+                },
+                "aspect_ratio": {
+                    "type": "string",
+                    "enum": ["16:9", "9:16", "1:1"],
+                    "description": "Video aspect ratio (default: 16:9).",
+                },
+                "camera_movement": {
+                    "type": "string",
+                    "enum": ["dolly_in", "dolly_out", "pan_left", "pan_right", "orbit_360", "crane_up", "static"],
+                    "description": "Cinematic camera movement choreography.",
+                },
+                "reference_image": {
+                    "type": "string",
+                    "description": "Optional image filename or URL for first-frame image-to-video anchoring.",
+                },
+                "preview": {
+                    "type": "boolean",
+                    "description": "Render fast 480P preview instead of 768P.",
+                },
+            },
+            "required": ["prompt"],
         },
     },
     {
-        "type": "function",
-        "function": {
-            "name": "gpu_cleanup",
-            "description": "Unload resident ComfyUI models and free VRAM before launching heavy video tasks.",
-            "parameters": {"type": "object", "properties": {}},
+        "name": "create_storyboard",
+        "description": "Deconstruct a narrative story script into a multi-shot cinematic storyboard sequence with camera motions and shot tags.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "synopsis": {"type": "string", "description": "Story outline or screenplay summary."},
+                "style": {"type": "string", "description": "Visual style preset (e.g. cinematic, anime, cyberpunk)."},
+                "num_shots": {"type": "integer", "description": "Number of shots to generate (3-6)."},
+                "aspect_ratio": {"type": "string", "description": "Aspect ratio for the shots (16:9, 9:16)."},
+            },
+            "required": ["synopsis"],
         },
+    },
+    {
+        "name": "get_system_status",
+        "description": "Fetch real-time GPU telemetry (RTX 2080Ti VRAM usage, temperature, power) and engine state.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "gpu_cleanup",
+        "description": "Flush resident models from VRAM and free GPU memory for model switching.",
+        "parameters": {"type": "object", "properties": {}},
     },
 ]
 
 
-def _dimension_for_aspect(aspect: str, is_video: bool, model: str = "") -> tuple[int, int]:
+def _dimension_for_aspect(aspect: str, is_video: bool = False, model: str = "minimax_h3") -> tuple[int, int]:
     if is_video:
-        if "minimax" in model:
+        if model == "minimax_h3":
             return {"16:9": (1344, 768), "9:16": (768, 1344), "1:1": (1024, 1024)}.get(aspect, (1344, 768))
         else:
             return {"16:9": (1280, 704), "9:16": (704, 1280), "1:1": (1024, 1024)}.get(aspect, (1280, 704))
@@ -218,6 +211,8 @@ async def execute_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             "width": w,
             "height": h,
             "seed": -1,
+            "seconds": 5.0,
+            "fps": 24.0,
             "length": 49 if preview else 121,
             "filename_prefix": f"a2a_video_{uuid.uuid4().hex[:8]}",
         }
@@ -247,11 +242,33 @@ async def handle_agent_chat(
 ) -> dict[str, Any]:
     """Conversational reasoning endpoint for Agent Copilot & A2A interaction."""
     gpu_watchdog.touch()
-    
-    # 1. Check if user wants a storyboard
     lower_msg = message.lower()
-    is_storyboard = mode == "storyboard" or ("分镜" in lower_msg or "storyboard" in lower_msg or "镜头" in lower_msg and ("连续" in lower_msg or "剧本" in lower_msg))
-    
+
+    # Determine intent strictly based on mode, or infer if auto
+    if mode == "storyboard":
+        is_storyboard, is_video, is_image = True, False, False
+    elif mode == "video":
+        is_storyboard, is_video, is_image = False, True, False
+    elif mode == "image":
+        is_storyboard, is_video, is_image = False, False, True
+    else:
+        # mode == "auto" -> intelligent keyword inference
+        is_storyboard = "分镜" in lower_msg or "storyboard" in lower_msg or ("剧本" in lower_msg and "镜头" in lower_msg)
+        is_video = (
+            not is_storyboard
+            and (
+                "视频" in lower_msg
+                or "video" in lower_msg
+                or "动起来" in lower_msg
+                or "运镜" in lower_msg
+                or "生成5秒" in lower_msg
+                or (bool(ref_image) and ("让" in lower_msg or "镜头" in lower_msg))
+            )
+            and ("生成图片" not in lower_msg and "画一张" not in lower_msg and "画幅" not in lower_msg or "视频" in lower_msg)
+        )
+        is_image = not is_storyboard and not is_video
+
+    # 1. Storyboard Branch
     if is_storyboard:
         sb = await plan_storyboard(message, style="cinematic", num_shots=3, aspect_ratio=aspect_ratio)
         return {
@@ -261,14 +278,9 @@ async def handle_agent_chat(
             "status": "planned",
         }
 
-    # 2. Check if user wants video
-    is_video = mode == "video" or (
-        "视频" in lower_msg or "video" in lower_msg or "动起来" in lower_msg or "运镜" in lower_msg or "生成5秒" in lower_msg or "动画" in lower_msg
-    )
-
+    # 2. Video Branch
     if is_video:
         is_i2v = bool(ref_image)
-        # Select MiniMax H3 or Wan2.1
         wf = "video_minimax_h3_i2v" if is_i2v else "video_minimax_h3_t2v"
         w, h = _dimension_for_aspect(aspect_ratio, is_video=True, model="minimax_h3")
         if preview:
@@ -283,6 +295,8 @@ async def handle_agent_chat(
             "width": w,
             "height": h,
             "seed": -1,
+            "seconds": 5.0,
+            "fps": 24.0,
             "length": 49 if preview else 121,
             "filename_prefix": f"copilot_video_{uuid.uuid4().hex[:8]}",
         }
@@ -302,7 +316,7 @@ async def handle_agent_chat(
             "stream_url": f"/api/v1/tasks/{task.id}/stream",
         }
 
-    # 3. Default to fast image generation
+    # 3. Image Generation Branch
     is_pixel = "像素" in lower_msg or "pixel" in lower_msg
     wf = "image_z_image_pixel" if is_pixel else "image_z_image_turbo"
     w, h = _dimension_for_aspect(aspect_ratio, is_video=False)

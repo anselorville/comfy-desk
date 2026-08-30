@@ -7,11 +7,27 @@ Parameter injection replaces sentinel values (e.g. __POSITIVE_PROMPT__).
 """
 import json
 import copy
+import random
 import re
 from pathlib import Path
 from typing import Any
 
 WORKFLOW_DIR = Path(__file__).parent.parent / "workflows"
+
+DEFAULT_SENTINEL_VALUES: dict[str, Any] = {
+    "positive_prompt": "",
+    "negative_prompt": "",
+    "steps": 20,
+    "cfg": 5.0,
+    "width": 1024,
+    "height": 1024,
+    "length": 121,
+    "seconds": 5.0,
+    "fps": 24.0,
+    "filename_prefix": "comfydesk_out",
+    "lora_strength": 1.0,
+    "image_filename": "",
+}
 
 
 def list_workflows() -> list[dict[str, Any]]:
@@ -85,9 +101,47 @@ def inject_params(workflow: dict[str, Any], params: dict[str, Any]) -> dict[str,
     Sentinel format: "__KEY__" → params["key"]
     e.g. "__POSITIVE_PROMPT__" → params["positive_prompt"]
     """
+    # Normalize params keys to lowercase
+    norm_params = {k.lower(): v for k, v in params.items()}
+
+    # Resolve seed: if -1 or not given, assign random positive int
+    if "seed" not in norm_params or norm_params["seed"] is None or norm_params["seed"] == -1:
+        norm_params["seed"] = random.randint(1, 2**32 - 1)
+    else:
+        try:
+            norm_params["seed"] = int(norm_params["seed"])
+            if norm_params["seed"] < 0:
+                norm_params["seed"] = random.randint(1, 2**32 - 1)
+        except (ValueError, TypeError):
+            norm_params["seed"] = random.randint(1, 2**32 - 1)
+
+    # Resolve seconds default if missing
+    if "seconds" not in norm_params:
+        norm_params["seconds"] = 5.0
+    else:
+        try:
+            norm_params["seconds"] = float(norm_params["seconds"])
+        except (ValueError, TypeError):
+            norm_params["seconds"] = 5.0
+
     wf = copy.deepcopy(workflow)
-    _replace_sentinels(wf, params)
+    _replace_sentinels(wf, norm_params)
     return wf
+
+
+def _cast_sentinel_value(key: str, val: Any) -> Any:
+    """Ensure sentinel values conform to the expected types in ComfyUI schemas."""
+    if key in ("seed", "steps", "width", "height", "length"):
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return val
+    elif key in ("cfg", "seconds", "fps", "lora_strength"):
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return val
+    return val
 
 
 def _replace_sentinels(obj: Any, params: dict[str, Any]) -> Any:
@@ -99,6 +153,8 @@ def _replace_sentinels(obj: Any, params: dict[str, Any]) -> Any:
             obj[i] = _replace_sentinels(v, params)
     elif isinstance(obj, str) and obj.startswith("__") and obj.endswith("__"):
         key = obj[2:-2].lower()
-        if key in params:
-            return params[key]
+        if key in params and params[key] is not None:
+            return _cast_sentinel_value(key, params[key])
+        elif key in DEFAULT_SENTINEL_VALUES:
+            return _cast_sentinel_value(key, DEFAULT_SENTINEL_VALUES[key])
     return obj
