@@ -17,7 +17,7 @@ echo "[1/4] ComfyUI 引擎 :8188"
 echo "[2/4] FastAPI 网关 :8001"
 (
   cd gateway
-  exec "$ROOT/.venv/bin/python" -m uvicorn main:app --host 0.0.0.0 --port 8001
+  exec "$ROOT/.venv/bin/python" -m uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ) >"$ROOT/logs/gateway.log" 2>&1 &
 
 echo "[3/4] Next.js 前端 :3000"
