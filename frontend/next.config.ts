@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
-  // Forward /images/* to ComfyUI output via Nginx, allow unoptimized direct src
   reactStrictMode: true,
 };
 

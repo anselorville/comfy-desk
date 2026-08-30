@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { generate, generateAuto, subscribeTaskStream, TaskResponse } from "../../lib/api";
+import { generate, generateAuto, subscribeTaskStream, TaskResponse, resolveImageUrl } from "../../lib/api";
 
 const MODEL_OPTIONS = [
   { id: "image_z_image_turbo", label: "⚡ Z-Image Turbo 极速绘图 (BF16)", type: "image", defaultSteps: 8, defaultCfg: 1.5 },
@@ -124,8 +124,8 @@ export default function QuickStudioPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-extrabold text-slate-900">⚡ 快速工位 (Quick Studio)</h1>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+          <h1 className="text-xl font-bold text-slate-900">⚡ 快速工位 (Quick Studio)</h1>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold">
             Single-Job Workbench
           </span>
         </div>
@@ -138,7 +138,7 @@ export default function QuickStudioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left: Controls Panel (col-span-5) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-5">
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-5">
           
           {/* Model Selector */}
           <div>
@@ -150,13 +150,13 @@ export default function QuickStudioPage() {
                   onClick={() => handleModelChange(opt.id)}
                   className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                     model === opt.id
-                      ? "border-indigo-600 bg-indigo-50/50 shadow-2xs"
-                      : "border-slate-200 hover:border-slate-300 bg-slate-50/30"
+                      ? "border-slate-900 bg-slate-50 shadow-2xs"
+                      : "border-slate-200/80 hover:border-slate-300 bg-white"
                   }`}
                 >
                   <span className="text-xs font-bold text-slate-800">{opt.label}</span>
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                    opt.type === "video" ? "bg-violet-100 text-violet-700" : "bg-blue-100 text-blue-700"
+                    opt.type === "video" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-700"
                   }`}>
                     {opt.type}
                   </span>
@@ -173,7 +173,7 @@ export default function QuickStudioPage() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
               placeholder="输入画面的详细描述（英文或中文均可）..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all leading-relaxed"
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none transition-all leading-relaxed"
             />
           </div>
 
@@ -188,8 +188,8 @@ export default function QuickStudioPage() {
                   onClick={() => setAspectRatio(ratio)}
                   className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
                     aspectRatio === ratio
-                      ? "bg-indigo-600 text-white shadow-xs"
-                      : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80"
                   }`}
                 >
                   {ratio}
@@ -225,7 +225,7 @@ export default function QuickStudioPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-3 rounded-xl border border-dashed border-slate-300 hover:border-indigo-500 text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-slate-50/50 hover:bg-indigo-50/30 transition-all cursor-pointer"
+                className="w-full py-3 rounded-xl border border-dashed border-slate-300 hover:border-slate-900 text-xs font-semibold text-slate-500 hover:text-slate-900 bg-slate-50/50 hover:bg-slate-100/50 transition-all cursor-pointer"
               >
                 + 上传参考图或图生视频首帧
               </button>
@@ -294,10 +294,10 @@ export default function QuickStudioPage() {
           <button
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
-            className={`w-full py-3.5 rounded-xl text-xs font-black tracking-widest uppercase transition-all shadow-xs ${
+            className={`w-full py-3.5 rounded-xl text-xs font-black tracking-widest uppercase transition-all ${
               loading || !prompt.trim()
                 ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+                : "bg-slate-900 hover:bg-black text-white cursor-pointer active:scale-95 shadow-xs"
             }`}
           >
             {loading ? "⌛ 渲染中..." : "✦ 立即开始生成"}
@@ -305,12 +305,12 @@ export default function QuickStudioPage() {
         </div>
 
         {/* Right: Live Canvas (col-span-7) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between min-h-[580px]">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between min-h-[580px]">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-slate-900">创作画布</h2>
               {loading && (
-                <span className="text-xs font-semibold text-indigo-600 animate-pulse">{statusText}</span>
+                <span className="text-xs font-semibold text-slate-700 animate-pulse">{statusText}</span>
               )}
             </div>
 
@@ -318,7 +318,7 @@ export default function QuickStudioPage() {
             {loading && (
               <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4 overflow-hidden">
                 <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                  className="bg-slate-900 h-full rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
@@ -328,7 +328,7 @@ export default function QuickStudioPage() {
             {resultImages.length > 0 ? (
               <div className="space-y-4">
                 {resultImages.map((src, i) => {
-                  const fullUrl = `/images/${src}`;
+                  const fullUrl = resolveImageUrl(src);
                   const isVideo = /\.(mp4|webm)$/i.test(src);
                   return (
                     <div key={i} className="group relative rounded-xl overflow-hidden border border-slate-200 bg-black">
@@ -342,7 +342,9 @@ export default function QuickStudioPage() {
                         <a
                           href={fullUrl}
                           download
-                          className="px-3 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-black transition-colors"
                         >
                           ⬇ 下载原片
                         </a>
@@ -358,8 +360,8 @@ export default function QuickStudioPage() {
               </div>
             ) : (
               <div className="h-96 rounded-xl bg-slate-50/50 flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                <p className="text-xs font-semibold text-indigo-600 animate-pulse">{statusText}</p>
+                <div className="w-10 h-10 border-3 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
+                <p className="text-xs font-semibold text-slate-700 animate-pulse">{statusText}</p>
               </div>
             )}
 

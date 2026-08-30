@@ -14,6 +14,26 @@ function resolveApiBase(): string {
 
 export const API_BASE = resolveApiBase();
 
+export function resolveImageUrl(filename: string): string {
+  if (!filename) return "";
+  if (filename.startsWith("http://") || filename.startsWith("https://") || filename.startsWith("data:")) {
+    return filename;
+  }
+  let clean = filename;
+  while (clean.startsWith("/images/")) {
+    clean = clean.slice(8);
+  }
+  clean = clean.replace(/^\/+/, "");
+  
+  if (typeof window !== "undefined") {
+    const loc = window.location;
+    if (loc.port === "3000") {
+      return `${loc.protocol}//${loc.hostname}:8001/images/${clean}`;
+    }
+  }
+  return `/images/${clean}`;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface GpuTelemetry {

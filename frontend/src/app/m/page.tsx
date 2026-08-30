@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { sendAgentChat, subscribeTaskStream, TaskResponse, GpuTelemetry, fetchGpuTelemetry } from "../../lib/api";
+import {
+  sendAgentChat,
+  subscribeTaskStream,
+  TaskResponse,
+  GpuTelemetry,
+  fetchGpuTelemetry,
+  resolveImageUrl,
+} from "../../lib/api";
 
 interface MobileTaskItem {
   id: string;
@@ -67,7 +74,7 @@ export default function MobilePage() {
         message: currentInput,
         ref_image: currentRef || undefined,
         mode: mode,
-        aspect_ratio: "9:16", // default to vertical on mobile
+        aspect_ratio: "9:16",
         preview: false,
       });
 
@@ -87,7 +94,7 @@ export default function MobilePage() {
                   ...t,
                   status: updatedTask.status,
                   progress: updatedTask.progress,
-                  mediaUrl: firstImg ? `/images/${firstImg}` : t.mediaUrl,
+                  mediaUrl: firstImg ? resolveImageUrl(firstImg) : t.mediaUrl,
                   isVideo,
                   error: updatedTask.error || undefined,
                 };
@@ -112,7 +119,7 @@ export default function MobilePage() {
       {/* Sticky Mobile App Bar */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
+          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-black text-sm">
             ✦
           </div>
           <span className="font-extrabold text-sm text-slate-900 tracking-tight">ComfyDesk 随身版</span>
@@ -140,9 +147,9 @@ export default function MobilePage() {
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     mode === m
-                      ? "bg-indigo-600 text-white shadow-xs"
+                      ? "bg-slate-900 text-white shadow-2xs"
                       : "bg-slate-100 text-slate-600"
                   }`}
                 >
@@ -171,7 +178,7 @@ export default function MobilePage() {
             onChange={(e) => setInput(e.target.value)}
             rows={3}
             placeholder="说出你想生成的画面或运镜动作..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none leading-relaxed"
           />
 
           {/* Controls Bar */}
@@ -198,7 +205,7 @@ export default function MobilePage() {
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all shadow-xs ${
                 loading || !input.trim()
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+                  : "bg-slate-900 hover:bg-black text-white cursor-pointer active:scale-95"
               }`}
             >
               {loading ? "Agent 调度中..." : "立即创作 ✦"}
@@ -233,7 +240,7 @@ export default function MobilePage() {
             {(task.status === "running" || task.status === "pending") && (
               <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                  className="bg-slate-900 h-full rounded-full transition-all duration-300"
                   style={{ width: `${task.progress}%` }}
                 ></div>
               </div>
@@ -258,9 +265,11 @@ export default function MobilePage() {
                   <a
                     href={task.mediaUrl}
                     download
-                    className="px-3 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-black"
                   >
-                    ⬇ 保存到相册
+                    ⬇ 保存原片
                   </a>
                 </div>
               </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
-import { fetchArtifacts, Artifact } from "../../lib/api";
+import { fetchArtifacts, Artifact, resolveImageUrl } from "../../lib/api";
 
 export default function GalleryPage() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -31,8 +31,9 @@ export default function GalleryPage() {
   const mediaItems = artifacts.flatMap((art) => {
     return (art.images || []).map((img) => {
       const isVideo = /\.(mp4|webm)$/i.test(img);
+      const fullSrc = resolveImageUrl(img);
       return {
-        src: `/images/${img}`,
+        src: fullSrc,
         filename: img,
         isVideo,
         prompt: art.prompt,
@@ -56,8 +57,8 @@ export default function GalleryPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900">🖼️ 多媒体创作画廊 (Gallery)</h1>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+            <h1 className="text-xl font-bold text-slate-900">🖼️ 多媒体创作画廊</h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold">
               {filteredItems.length} 件作品
             </span>
           </div>
@@ -74,10 +75,10 @@ export default function GalleryPage() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   filter === f
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+                    ? "bg-slate-900 text-white shadow-2xs"
+                    : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80"
                 }`}
               >
                 {labels[f]}
@@ -89,8 +90,8 @@ export default function GalleryPage() {
 
       {/* Media Grid */}
       {loading ? (
-        <div className="h-72 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 gap-3">
-          <div className="w-6 h-6 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="h-72 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 gap-3">
+          <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
           <span className="text-xs font-semibold">正在载入画廊作品...</span>
         </div>
       ) : filteredItems.length === 0 ? (
@@ -104,7 +105,7 @@ export default function GalleryPage() {
           {filteredItems.map((item, idx) => (
             <div
               key={idx}
-              className="group bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between"
+              className="group bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between"
             >
               {/* Media Preview Box */}
               <div
@@ -155,7 +156,9 @@ export default function GalleryPage() {
                   <a
                     href={item.src}
                     download
-                    className="font-bold text-indigo-600 hover:text-indigo-800"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-slate-800 hover:text-black"
                   >
                     ⬇ 下载
                   </a>

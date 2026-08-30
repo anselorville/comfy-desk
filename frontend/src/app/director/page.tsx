@@ -9,6 +9,7 @@ import {
   Storyboard,
   CameraPreset,
   StylePreset,
+  resolveImageUrl,
 } from "../../lib/api";
 
 export default function DirectorPage() {
@@ -62,7 +63,6 @@ export default function DirectorPage() {
     if (!currentStoryboard) return;
     try {
       await renderShot(currentStoryboard.id, shotId, preview);
-      // Poll or update shot state
       setCurrentStoryboard((prev) => {
         if (!prev) return prev;
         const updated = prev.shots.map((s) =>
@@ -91,8 +91,8 @@ export default function DirectorPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">🎬 智能导演与分镜工作台</h1>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 font-semibold">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">🎬 智能导演与分镜工作台</h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold">
               Director Studio
             </span>
           </div>
@@ -103,7 +103,7 @@ export default function DirectorPage() {
       </div>
 
       {/* Script & Planning Controls Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-900">剧本构思与导演编排</h2>
           <span className="text-xs text-slate-400">Step 1: 输入剧本梗概</span>
@@ -116,7 +116,7 @@ export default function DirectorPage() {
             onChange={(e) => setSynopsis(e.target.value)}
             rows={3}
             placeholder="例如：赛博朋克雨夜，探员在霓虹闪烁的窄巷中追查仿生人，镜头从全景推至中景交锋，最后特写眼神中的决绝..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all leading-relaxed"
+            className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none transition-all leading-relaxed"
           />
         </div>
 
@@ -129,7 +129,7 @@ export default function DirectorPage() {
             <select
               value={style}
               onChange={(e) => setStyle(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-medium cursor-pointer"
+              className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 font-medium cursor-pointer"
             >
               {presets.styles.length > 0 ? (
                 presets.styles.map((s) => (
@@ -160,8 +160,8 @@ export default function DirectorPage() {
                   onClick={() => setNumShots(count)}
                   className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     numShots === count
-                      ? "bg-indigo-600 text-white shadow-xs"
-                      : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80"
                   }`}
                 >
                   {count} 镜
@@ -176,7 +176,7 @@ export default function DirectorPage() {
             <select
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-medium cursor-pointer"
+              className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 font-medium cursor-pointer"
             >
               <option value="16:9">16:9 横屏电影</option>
               <option value="9:16">9:16 竖屏短视频</option>
@@ -189,10 +189,10 @@ export default function DirectorPage() {
             <button
               onClick={handlePlan}
               disabled={loading || !synopsis.trim()}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all shadow-xs ${
+              className={`w-full py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
                 loading || !synopsis.trim()
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95 shadow-indigo-200"
+                  : "bg-slate-900 hover:bg-black text-white cursor-pointer active:scale-95 shadow-xs"
               }`}
             >
               {loading ? "🎬 智能构思中..." : "🎬 一键智能导演分镜 ✦"}
@@ -209,7 +209,7 @@ export default function DirectorPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900 text-white">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 font-semibold font-mono">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-white/10 text-white font-semibold font-mono">
                   {currentStoryboard.aspect_ratio}
                 </span>
                 <h3 className="text-base font-bold">{currentStoryboard.title}</h3>
@@ -230,7 +230,7 @@ export default function DirectorPage() {
 
               <button
                 onClick={handleRenderAllShots}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white transition-all shadow-sm cursor-pointer active:scale-95"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 transition-all shadow-sm cursor-pointer active:scale-95"
               >
                 🎬 批量渲染全部镜头
               </button>
@@ -241,18 +241,17 @@ export default function DirectorPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentStoryboard.shots.map((shot) => {
               const isRendering = shot.status === "rendering";
-              const isDone = shot.status === "done" && Boolean(shot.video_url);
 
               return (
                 <div
                   key={shot.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between"
+                  className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between"
                 >
                   {/* Top Media / Player Area */}
                   <div className="relative aspect-video bg-slate-950 flex items-center justify-center overflow-hidden">
                     {shot.video_url ? (
                       <video
-                        src={shot.video_url}
+                        src={resolveImageUrl(shot.video_url)}
                         controls
                         playsInline
                         loop
@@ -279,7 +278,7 @@ export default function DirectorPage() {
 
                     {/* Camera Badge top right */}
                     <div className="absolute top-2.5 right-2.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600/80 text-white backdrop-blur">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-white backdrop-blur">
                         {shot.camera_movement}
                       </span>
                     </div>
@@ -308,9 +307,11 @@ export default function DirectorPage() {
 
                       {shot.video_url ? (
                         <a
-                          href={shot.video_url}
+                          href={resolveImageUrl(shot.video_url)}
                           download
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-100 transition-colors"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-800 hover:text-black bg-slate-100 transition-colors"
                         >
                           ⬇ 下载镜头
                         </a>
@@ -321,7 +322,7 @@ export default function DirectorPage() {
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             isRendering
                               ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                              : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer active:scale-95"
+                              : "bg-slate-900 hover:bg-black text-white shadow-2xs cursor-pointer active:scale-95"
                           }`}
                         >
                           {isRendering ? "渲染中..." : "渲染此镜头 ✦"}
@@ -338,7 +339,7 @@ export default function DirectorPage() {
 
       {/* Saved Storyboards List */}
       {savedStoryboards.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 space-y-4">
           <h3 className="text-sm font-bold text-slate-900">历史分镜项目 ({savedStoryboards.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {savedStoryboards.map((sb) => (
@@ -347,8 +348,8 @@ export default function DirectorPage() {
                 onClick={() => setCurrentStoryboard(sb)}
                 className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                   currentStoryboard?.id === sb.id
-                    ? "border-indigo-600 bg-indigo-50/40 shadow-xs"
-                    : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+                    ? "border-slate-900 bg-slate-50 shadow-2xs"
+                    : "border-slate-200/80 hover:border-slate-300 bg-white"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">

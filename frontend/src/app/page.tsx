@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { sendAgentChat, subscribeTaskStream, TaskResponse, Storyboard, renderShot } from "../lib/api";
+import {
+  sendAgentChat,
+  subscribeTaskStream,
+  TaskResponse,
+  Storyboard,
+  renderShot,
+  resolveImageUrl,
+} from "../lib/api";
 
 interface ChatMessage {
   id: string;
@@ -402,8 +409,10 @@ export default function AgentCopilotPage() {
 
                           {images.length > 0 && (
                             <a
-                              href={`/images/${images[0]}`}
+                              href={resolveImageUrl(images[0])}
                               download
+                              target="_blank"
+                              rel="noreferrer"
                               className="text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3 py-1 rounded-lg border border-slate-200 transition-colors"
                             >
                               ⬇ 下载原片
@@ -425,7 +434,7 @@ export default function AgentCopilotPage() {
                         {images.length > 0 ? (
                           <div className="space-y-3">
                             {images.map((src, i) => {
-                              const fullUrl = `/images/${src}`;
+                              const fullUrl = resolveImageUrl(src);
                               const isVideo = /\.(mp4|webm)$/i.test(src);
                               return (
                                 <div key={i} className="group relative rounded-xl overflow-hidden border border-slate-200 bg-black">
@@ -504,7 +513,7 @@ export default function AgentCopilotPage() {
                               </div>
 
                               {shot.video_url ? (
-                                <video src={shot.video_url} controls playsInline loop className="w-full rounded-lg bg-black mt-2" />
+                                <video src={resolveImageUrl(shot.video_url)} controls playsInline loop className="w-full rounded-lg bg-black mt-2" />
                               ) : (
                                 <button
                                   onClick={() => handleRenderStoryboardShot(sb.id, shot.id)}
