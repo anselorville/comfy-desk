@@ -1,4 +1,13 @@
-"""ComfyUI client — queue prompts, wait via WebSocket, fetch/upload images."""
+"""
+Async client for the ComfyUI HTTP + WebSocket API.
+
+Connects to ComfyUI (default http://comfyui:8188) to:
+- POST /prompt: submit a workflow graph
+- WS /ws: listen for progress, error, and completion events
+- GET /view: retrieve output image bytes
+- GET /history: retrieve execution history
+- POST /upload/image: upload reference images
+"""
 import asyncio
 import json
 import logging
@@ -12,11 +21,11 @@ from services.task_store import update_task
 
 logger = logging.getLogger(__name__)
 
-_COMFYUI_BASE = settings.comfyui_url
+_COMFYUI_BASE = settings.comfyui_url.rstrip("/")
 
 
 async def queue_prompt(workflow: dict[str, Any], client_id: str) -> str:
-    """Submit a workflow to ComfyUI and return the prompt_id."""
+    """Submit a workflow to ComfyUI; returns prompt_id."""
     payload = {"prompt": workflow, "client_id": client_id}
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(f"{_COMFYUI_BASE}/prompt", json=payload)
@@ -25,30 +34,32 @@ async def queue_prompt(workflow: dict[str, Any], client_id: str) -> str:
 
 
 def _collect_images(obj: Any) -> list[str]:
-    """Recursively collect [{'filename': ...}] entries from any message shape.
-
-    Handles both old frames (`output` is the node output dict directly) and
-    node-id-keyed frames, plus arbitrary nesting seen across engine versions.
-    """
+    """Recursively collect output image/video filenames from message or history payload."""
     out: list[str] = []
 
     def _walk(node: Any) -> None:
         if isinstance(node, dict):
-            imgs = node.get("images")
-            if isinstance(imgs, list):
-                out.extend(
-                    i["filename"] for i in imgs
-                    if isinstance(i, dict) and i.get("filename")
-                )
-            else:
-                for v in node.values():
-                    _walk(v)
+            for field in ("images", "videos", "gifs", "files"):
+                items = node.get(field)
+                if isinstance(items, list):
+                    for i in items:
+                        if isinstance(i, dict) and i.get("filename"):
+                            out.append(i["filename"])
+            for v in node.values():
+                _walk(v)
         elif isinstance(node, list):
             for v in node:
                 _walk(v)
 
     _walk(obj)
-    return out
+    # Deduplicate while preserving order
+    seen = set()
+    deduped = []
+    for x in out:
+        if x not in seen:
+            seen.add(x)
+            deduped.append(x)
+    return deduped
 
 
 async def wait_for_completion(
@@ -106,6 +117,20 @@ async def wait_for_completion(
         await asyncio.wait_for(_listen(), timeout=timeout)
     except asyncio.TimeoutError:
         logger.warning("ComfyUI prompt %s timed out after %ss", prompt_id, timeout)
+    except Exception as e:
+        logger.warning("WebSocket listener notice: %s", e)
+
+    # Robust fallback: fetch history from ComfyUI REST API if output_images is empty
+    if not output_images:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                h_resp = await client.get(f"{_COMFYUI_BASE}/history/{prompt_id}")
+                if h_resp.status_code == 200:
+                    history = h_resp.json().get(prompt_id, {})
+                    outputs = history.get("outputs", {})
+                    output_images.extend(_collect_images(outputs))
+        except Exception as e:
+            logger.warning("History fallback query failed: %s", e)
 
     return output_images
 
@@ -131,7 +156,8 @@ async def upload_image(data: bytes, filename: str, overwrite: bool = True) -> st
         return resp.json()["name"]
 
 
-async def get_system_stats() -> dict:
+async def get_system_stats() -> dict[str, Any]:
+    """Fetch system statistics and GPU state from ComfyUI."""
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(f"{_COMFYUI_BASE}/system_stats")
         resp.raise_for_status()
