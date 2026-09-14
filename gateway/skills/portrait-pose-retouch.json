@@ -4,10 +4,12 @@
   "description": "基于人物参考照片进行低幅度重绘，用转、弯、顺、露四类可观察变量修正姿态、手部可见性和身体线条，同时尽量保留人物身份与原始场景。",
   "workflow": "photo_cinematic_retouch",
   "tags": ["portrait", "photography", "pose", "retouch", "img2img", "identity"],
-  "prompt_template": "preserve the person's identity, facial features, hairstyle, clothing identity and scene context; {subject}, {framing}, {stance}, {facing}, {bend}, {gesture}, {line_flow}, {hand_visibility}, {silhouette}, {scene_adjustment}, {lighting_adjustment}, realistic photographic retouching, natural anatomy",
+  "prompt_template": "{identity_anchor}; preserve the person's identity, facial features, hairstyle, clothing identity and scene context; {subject}, {framing}, {stance}, {facing}, {bend}, {gesture}, {line_flow}, {hand_visibility}, {silhouette}, {scene_adjustment}, {lighting_adjustment}, {view_consistency}, realistic photographic retouching, natural anatomy",
   "negative_prompt_template": "{negative_prompt}, identity change, different person, age change, face reshaping, plastic skin, generic stiff pose, flat silhouette, awkward joint bends, broken limb lines, hidden hands, fused fingers, extra fingers, missing fingers, distorted anatomy, excessive background change, harsh flash, oversaturated, blurry face, watermark",
   "defaults": {
+    "identity_anchor": "stable recurring character; match the reference sheet's facial structure, hair, body proportions, skin texture, and apparent age",
     "image_filename": "",
+    "view_consistency": "when a reference sheet is supplied, use it as the identity authority across all views and do not average the face",
     "subject": "the same person as the reference photo",
     "framing": "keep the original framing unless full-body visibility is requested",
     "stance": "retain the original stance and improve its weight distribution",
@@ -27,6 +29,8 @@
     "filename_prefix": "portrait_pose_retouch"
   },
   "fields": [
+    "identity_anchor",
+    "view_consistency",
     "image_filename",
     "subject",
     "framing",

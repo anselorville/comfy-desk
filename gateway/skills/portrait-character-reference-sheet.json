@@ -1,0 +1,29 @@
+{
+  "id": "portrait-character-reference-sheet",
+  "name": "人物角色参考板",
+  "description": "从一张人物参考图建立可复用的人物设计图，覆盖正面、侧面、背面全身视图、脸部结构、体型比例、发型发色、表情、服装配件、肤质和年龄感，用于后续人物生成与身份一致性控制。",
+  "workflow": "image_z_image_turbo",
+  "tags": ["portrait", "character", "reference-sheet", "identity", "consistency", "design"],
+  "prompt_template": "Create a clean professional character reference sheet for {character_subject}. Layout: one large neutral full-body front view, one full-body three-quarter view, one side profile, one back view, plus a row of close-up face studies with neutral, smiling, serious, and surprised expressions. Include small labeled visual callouts for facial structure, body proportions and head-to-body ratio, hairstyle and hair color, clothing construction and accessories, skin texture and apparent age. Keep exactly the same person in every panel: identical facial identity, hairstyle, body proportions, clothing details, colors, and accessories. Orthographic studio presentation, evenly lit neutral background, consistent scale, no decorative props, no extra people, no text errors, no watermark.",
+  "negative_prompt_template": "{negative_prompt}, different person between panels, inconsistent face, changing hairstyle, changing outfit, altered body proportions, missing side view, missing back view, cropped feet, extra limbs, duplicated person, unreadable labels, fantasy collage, dramatic perspective, distorted anatomy, plastic skin, watermark",
+  "defaults": {
+    "character_subject": "the adult person shown in the reference image",
+    "negative_prompt": "",
+    "steps": 8,
+    "cfg": 1.0,
+    "width": 1344,
+    "height": 1344,
+    "seed": -1,
+    "filename_prefix": "portrait_character_reference_sheet"
+  },
+  "fields": [
+    "character_subject",
+    "negative_prompt",
+    "steps",
+    "cfg",
+    "width",
+    "height",
+    "seed"
+  ],
+  "created_at": "2026-09-14T00:00:00+08:00"
+}

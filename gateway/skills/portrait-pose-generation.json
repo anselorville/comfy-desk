@@ -4,9 +4,11 @@
   "description": "将摄影美姿中的转、弯、顺、露原则转换为可执行的人物文生图提示词，优先生成有破面、破线、连贯肢体线条和清晰手部落点的人像照片。",
   "workflow": "image_z_image_turbo",
   "tags": ["portrait", "photography", "pose", "composition", "txt2img"],
-  "prompt_template": "{subject}, {framing}, {stance}, {facing}, {bend}, {gesture}, {line_flow}, {hand_visibility}, {silhouette}, {scene}, {lighting}, photorealistic portrait photography, natural anatomy, coherent body proportions",
+  "prompt_template": "{identity_anchor}, {subject}, {framing}, {stance}, {facing}, {bend}, {gesture}, {line_flow}, {hand_visibility}, {silhouette}, {scene}, {lighting}, {view_consistency}, photorealistic portrait photography, natural anatomy, coherent body proportions",
   "negative_prompt_template": "{negative_prompt}, generic stiff pose, head torso legs facing the same direction, flat silhouette, awkward joint bends, broken limb lines, hidden hands, fused fingers, extra fingers, missing fingers, cropped feet, distorted anatomy, mannequin pose, blurry face, plastic skin, low quality, watermark",
   "defaults": {
+    "identity_anchor": "consistent recurring character with stable facial structure, hair, body proportions, skin texture, and age appearance",
+    "view_consistency": "if a character reference sheet is supplied, match its front, three-quarter, profile, and back-view identity details",
     "subject": "an adult person with distinctive facial features",
     "framing": "full-body portrait, feet visible in frame",
     "stance": "standing in a relaxed three-quarter pose",
@@ -27,6 +29,8 @@
     "filename_prefix": "portrait_pose_generation"
   },
   "fields": [
+    "identity_anchor",
+    "view_consistency",
     "subject",
     "framing",
     "stance",
