@@ -1,5 +1,7 @@
 # gitignore for comfy-desk
 .env
+.env.*
+!.env.example
 volumes/
 *.ckpt
 *.safetensors
@@ -7,6 +9,9 @@ volumes/
 *.pth
 __pycache__/
 *.pyc
+*.pem
+*.key
+*.crt
 .DS_Store
 frontend/.next/
 frontend/node_modules/
@@ -15,6 +20,7 @@ lora_output/
 outputs/
 *.log
 gateway/studio.db*
+gateway/tasks.sqlite*
 gateway/uploads/
 gateway/vapid_key.json
 gateway/certs/

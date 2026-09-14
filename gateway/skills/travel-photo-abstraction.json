@@ -1,0 +1,19 @@
+{
+  "id": "travel-photo-abstraction",
+  "name": "🗺️ 旅行照片抽象 (Travel Photo Abstraction)",
+  "description": "旅行照专属：把街景城市抽象成符号和色卡，风格统一，做旅行手账作品集绝了",
+  "workflow": "photo_cinematic_retouch",
+  "tags": ["travel", "photo", "abstraction", "editorial", "clean", "i2i"],
+  "prompt_template": "{subject}, travel photo abstraction, upper photograph preserved untouched, lower panel abstract reconstruction of source relationships, minimal marks and fields, clean uniform ivory background, poetic negative space, quiet editorial composition, no text",
+  "negative_prompt_template": "style transfer, recognizable scene illustration, simplified tracing, posterization, object redraw, gradient background, uneven background, text, watermark, caption",
+  "defaults": {
+    "subject": "the uploaded travel photograph",
+    "steps": 12,
+    "cfg": 1.5,
+    "denoise": 0.62,
+    "seed": -1,
+    "image_filename": ""
+  },
+  "fields": ["image_filename", "subject", "steps", "cfg", "denoise", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}

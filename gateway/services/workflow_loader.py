@@ -19,6 +19,7 @@ DEFAULT_SENTINEL_VALUES: dict[str, Any] = {
     "negative_prompt": "",
     "steps": 20,
     "cfg": 5.0,
+    "denoise": 0.62,
     "width": 1024,
     "height": 1024,
     "length": 121,

@@ -1,0 +1,19 @@
+{
+  "id": "gc-minimal-zine-poster",
+  "name": "📰 极简纸刊海报 (Minimal Zine Poster)",
+  "description": "一句话或一个主题 → 大面积留白+单一视觉焦点的纸刊海报，做旧纸张质感，情绪感拉满",
+  "workflow": "image_z_image_turbo",
+  "tags": ["poster", "zine", "minimal", "editorial", "paper", "t2i"],
+  "prompt_template": "{subject}, minimal zine poster, sparse vertical paper composition, large negative space, one small editorial focal element, experimental typography, single clear color accent, aged paper texture, print scan reproduction, poetic restrained mood, high aesthetic",
+  "negative_prompt_template": "commercial advertisement, full bleed busy layout, chaotic composition, generic collage template, oversaturated colors, glossy magazine cover, watermark, signature",
+  "defaults": {
+    "subject": "a poetic everyday scene",
+    "steps": 8,
+    "cfg": 1.0,
+    "width": 768,
+    "height": 1024,
+    "seed": -1
+  },
+  "fields": ["subject", "steps", "cfg", "width", "height", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}

@@ -14,10 +14,42 @@ from services.task_store import create_task
 from services.generation_runner import run_generation_task
 from services.director_service import plan_storyboard
 from services.gpu_manager import get_gpu_telemetry, free_comfyui_memory
+from services.prompt_stylist import enhance_travel_prompt, CINEMATOGRAPHY_PRESETS
 from services import gpu_watchdog
 
 
 A2A_TOOLS = [
+    {
+        "name": "retouch_photo",
+        "description": "Transform amateur travel snapshots, poor-lighting portraits, or cluttered photos into professional cinematography masterpieces (Leica, Hasselblad, Kodak Portra, Golden Hour) using AI relighting and camera prompt synthesis.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image_filename": {
+                    "type": "string",
+                    "description": "Uploaded reference photo filename (e.g. upload_xxx.jpg or user photo).",
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Amateur natural language description of desired aesthetic, scene, or edits.",
+                },
+                "style": {
+                    "type": "string",
+                    "enum": ["film_portra", "golden_hour", "fuji_clean", "cyber_night", "natgeo_epic"],
+                    "description": "Cinematography visual preset.",
+                },
+                "remove_passersby": {
+                    "type": "boolean",
+                    "description": "Whether to clean tourists and clutter in background (default: true).",
+                },
+                "denoise": {
+                    "type": "number",
+                    "description": "Restyling strength (0.45 - 0.75, default: 0.62).",
+                },
+            },
+            "required": ["image_filename"],
+        },
+    },
     {
         "name": "generate_image",
         "description": "Generate high-resolution photorealistic, anime, pixel art, or stylised images via local ComfyUI GPU workflows.",
@@ -230,6 +262,39 @@ async def execute_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             "poll_url": f"/api/v1/tasks/{task.id}",
         }
 
+    elif name == "retouch_photo":
+        ref_img = str(args.get("image_filename") or "").strip()
+        user_prompt = str(args.get("prompt") or "").strip()
+        style = str(args.get("style") or "film_portra")
+        remove_passersby = bool(args.get("remove_passersby", True))
+        denoise = float(args.get("denoise") or 0.62)
+
+        enhanced = enhance_travel_prompt(user_prompt, style_id=style, remove_passersby=remove_passersby)
+        wf = "photo_cinematic_retouch"
+        img_fn = ref_img if ref_img.startswith("data:") else ref_img.split("?")[0].split("/")[-1]
+        params = {
+            "workflow": wf,
+            "image_filename": img_fn,
+            "positive_prompt": enhanced["positive_prompt"],
+            "negative_prompt": enhanced["negative_prompt"],
+            "steps": 12,
+            "cfg": 1.5,
+            "denoise": denoise,
+            "seed": -1,
+            "filename_prefix": f"copilot_retouch_{uuid.uuid4().hex[:8]}",
+        }
+        task = await create_task(kind="retouch_photo", **params)
+        asyncio.create_task(run_generation_task(task.id, wf, params))
+        return {
+            "status": "submitted",
+            "task_id": task.id,
+            "workflow": wf,
+            "style": enhanced["style_label"],
+            "summary_zh": enhanced["summary_zh"],
+            "stream_url": f"/api/v1/tasks/{task.id}/stream",
+            "poll_url": f"/api/v1/tasks/{task.id}",
+        }
+
     raise ValueError(f"Unknown tool: {name}")
 
 
@@ -246,11 +311,13 @@ async def handle_agent_chat(
 
     # Determine intent strictly based on mode, or infer if auto
     if mode == "storyboard":
-        is_storyboard, is_video, is_image = True, False, False
+        is_storyboard, is_video, is_retouch, is_image = True, False, False, False
     elif mode == "video":
-        is_storyboard, is_video, is_image = False, True, False
+        is_storyboard, is_video, is_retouch, is_image = False, True, False, False
+    elif mode == "retouch":
+        is_storyboard, is_video, is_retouch, is_image = False, False, True, False
     elif mode == "image":
-        is_storyboard, is_video, is_image = False, False, True
+        is_storyboard, is_video, is_retouch, is_image = False, False, False, True
     else:
         # mode == "auto" -> intelligent keyword inference
         is_storyboard = "分镜" in lower_msg or "storyboard" in lower_msg or ("剧本" in lower_msg and "镜头" in lower_msg)
@@ -262,11 +329,17 @@ async def handle_agent_chat(
                 or "动起来" in lower_msg
                 or "运镜" in lower_msg
                 or "生成5秒" in lower_msg
-                or (bool(ref_image) and ("让" in lower_msg or "镜头" in lower_msg))
+                or (bool(ref_image) and ("让" in lower_msg and "动" in lower_msg))
             )
             and ("生成图片" not in lower_msg and "画一张" not in lower_msg and "画幅" not in lower_msg or "视频" in lower_msg)
         )
-        is_image = not is_storyboard and not is_video
+        is_retouch = (
+            not is_storyboard
+            and not is_video
+            and bool(ref_image)
+            and any(kw in lower_msg for kw in ["修", "改", "大片", "胶片", "旅行", "拍照", "光线", "路人", "优化", "重塑", "质感", "摄影", "调色", "背景", "滤镜"])
+        )
+        is_image = not is_storyboard and not is_video and not is_retouch
 
     # 1. Storyboard Branch
     if is_storyboard:
@@ -286,6 +359,7 @@ async def handle_agent_chat(
         if preview:
             w, h = (832, 480)
 
+        img_fn = ref_image if ref_image.startswith("data:") else ref_image.split("?")[0].split("/")[-1]
         params = {
             "workflow": wf,
             "positive_prompt": f"cinematic video, {message}, master lighting, photorealistic, 4k",
@@ -301,7 +375,7 @@ async def handle_agent_chat(
             "filename_prefix": f"copilot_video_{uuid.uuid4().hex[:8]}",
         }
         if is_i2v:
-            params["image_filename"] = ref_image.split("/")[-1]
+            params["image_filename"] = img_fn
 
         task = await create_task(kind="generate_video", **params)
         asyncio.create_task(run_generation_task(task.id, wf, params))
@@ -316,7 +390,96 @@ async def handle_agent_chat(
             "stream_url": f"/api/v1/tasks/{task.id}/stream",
         }
 
-    # 3. Image Generation Branch
+    # 3. Photo Retouching Branch (Travel & Cinematography Master)
+    if is_retouch:
+        # Intelligently classify across full 23 travel scenarios
+        style_key = "landmark_crowd_clean"
+        if any(w in lower_msg for w in ["舷窗", "飞机", "云海", "机窗"]):
+            style_key = "transit_plane_window"
+        elif any(w in lower_msg for w in ["高铁", "列车", "火车", "车厢"]):
+            style_key = "transit_train_speed"
+        elif any(w in lower_msg for w in ["自驾", "公路", "敞篷"]):
+            style_key = "transit_road_trip"
+        elif any(w in lower_msg for w in ["夜市", "路边摊", "蒸汽", "美食", "排挡"]):
+            style_key = "street_food_steam"
+        elif any(w in lower_msg for w in ["咖啡", "下午茶", "露天", "法式"]):
+            style_key = "cozy_cafe_afternoon"
+        elif any(w in lower_msg for w in ["居酒屋", "红灯笼", "小巷", "微醺"]):
+            style_key = "izakaya_lantern"
+        elif any(w in lower_msg for w in ["雨夜", "积水", "倒影", "赛博"]):
+            style_key = "cyber_rain_reflections"
+        elif any(w in lower_msg for w in ["天台", "高空", "天际线", "俯瞰夜景"]):
+            style_key = "rooftop_skyline_night"
+        elif any(w in lower_msg for w in ["森林", "晨雾", "丁达尔", "树林", "绿意"]):
+            style_key = "nature_misty_forest"
+        elif any(w in lower_msg for w in ["雪山", "高原", "金顶", "日照金山"]):
+            style_key = "nature_snow_mountain"
+        elif any(w in lower_msg for w in ["海岛", "玻璃海", "沙滩", "椰林"]):
+            style_key = "nature_tropical_island"
+        elif any(w in lower_msg for w in ["阴天", "死白", "大平光", "重打光"]):
+            style_key = "rescue_overcast_flat"
+        elif any(w in lower_msg for w in ["逆光", "黑脸", "暗沉", "眼神光"]):
+            style_key = "rescue_backlit_dark_face"
+        elif any(w in lower_msg for w in ["闪光灯", "直闪", "油光", "红眼"]):
+            style_key = "rescue_harsh_flash"
+        elif any(w in lower_msg for w in ["断崖", "悬崖", "海平线"]):
+            style_key = "sunset_cliff_epic"
+        elif any(w in lower_msg for w in ["蓝调", "blue hour", "暮色", "清冷"]):
+            style_key = "blue_hour_twilight"
+        elif any(w in lower_msg for w in ["落日", "夕阳", "发丝", "海边日落", "黄金时刻"]):
+            style_key = "sunset_beach_rim"
+        elif any(w in lower_msg for w in ["宫殿", "教堂", "穹顶", "纵深", "史诗"]):
+            style_key = "landmark_epic_scale"
+        elif any(w in lower_msg for w in ["地标夜景", "泛光", "辉煌"]):
+            style_key = "landmark_night_lit"
+        elif any(w in lower_msg for w in ["富士", "velvia", "色彩"]):
+            style_key = "film_fuji_velvia"
+        elif any(w in lower_msg for w in ["cinestill", "800t", "红晕"]):
+            style_key = "film_cinestill_800t"
+        elif any(w in lower_msg for w in ["徕卡", "leica", "portra", "胶片"]):
+            style_key = "film_leica_portra"
+
+        remove_passersby = ("不去除路人" not in lower_msg and "保留路人" not in lower_msg)
+        add_golden_light = any(w in lower_msg for w in ["黄金", "金光", "侧逆光", "暖阳", "金晕"])
+        shallow_bokeh = any(w in lower_msg for w in ["虚化", "景深", "大光圈", "散景"]) or True
+        sculpt_face = any(w in lower_msg for w in ["面部", "五官", "微光", "质感", "肤色"]) or True
+
+        enhanced = enhance_travel_prompt(
+            message,
+            style_id=style_key,
+            remove_passersby=remove_passersby,
+            add_golden_light=add_golden_light,
+            shallow_bokeh=shallow_bokeh,
+            sculpt_face=sculpt_face,
+        )
+        wf = "photo_cinematic_retouch"
+
+        img_fn = ref_image if ref_image.startswith("data:") else ref_image.split("?")[0].split("/")[-1]
+        params = {
+            "workflow": wf,
+            "image_filename": img_fn,
+            "positive_prompt": enhanced["positive_prompt"],
+            "negative_prompt": enhanced["negative_prompt"],
+            "steps": 12,
+            "cfg": 1.5,
+            "denoise": enhanced["denoise"],
+            "seed": -1,
+            "filename_prefix": f"copilot_retouch_{uuid.uuid4().hex[:8]}",
+        }
+        task = await create_task(kind="retouch_photo", **params)
+        asyncio.create_task(run_generation_task(task.id, wf, params))
+
+        return {
+            "reply": f"📸 **AI 摄影大师已为您启动大片重塑计划！**\n\n{enhanced['summary_zh']}\n\n⚡ 正在调动 ComfyUI 摄影级图生图引擎为您深度渲染...",
+            "kind": "image",
+            "task_id": task.id,
+            "workflow": wf,
+            "status": "running",
+            "poll_url": f"/api/v1/tasks/{task.id}",
+            "stream_url": f"/api/v1/tasks/{task.id}/stream",
+        }
+
+    # 4. Standard Text-to-Image Generation Branch
     is_pixel = "像素" in lower_msg or "pixel" in lower_msg
     wf = "image_z_image_pixel" if is_pixel else "image_z_image_turbo"
     w, h = _dimension_for_aspect(aspect_ratio, is_video=False)

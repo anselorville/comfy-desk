@@ -1,0 +1,18 @@
+{
+  "id": "photo_cinematic_retouch",
+  "name": "📸 旅行照片大片重塑 (AI Cinematography Retouch)",
+  "description": "将随手拍、光线欠佳或背景杂乱的旅行照片重塑为徕卡/哈苏胶片电影级摄影大片，支持光影重构与背景净化",
+  "type": "image",
+  "engine": "Z-Image Turbo BF16 + Lumina2",
+  "category": "retouch",
+  "default_params": {
+    "steps": 12,
+    "cfg": 1.5,
+    "denoise": 0.62,
+    "seed": -1,
+    "style": "film_portra",
+    "remove_passersby": true,
+    "positive_prompt": "cinematic photography, shot on Leica M6, 35mm Summicron-M f/1.4 ASPH, Kodak Portra 400, warm golden hour side lighting, soft lens halation, authentic film grain, pristine DaVinci Resolve color grading, 8k masterpiece",
+    "negative_prompt": "harsh flash, flat lighting, blurry face, crowded background, oversaturated, deformed hands, plastic skin, amateur phone photo"
+  }
+}

@@ -123,3 +123,21 @@ async def update_task(task_id: str, **kwargs):
                 (task.status.value, task.progress, json.dumps(task.images), task.error, json.dumps(task.params), task.id)
             )
             await db.commit()
+
+
+async def delete_task(task_id: str) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        await db.commit()
+    return True
+
+
+async def delete_tasks(task_ids: list[str]) -> int:
+    if not task_ids:
+        return 0
+    placeholders = ",".join("?" for _ in task_ids)
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(f"DELETE FROM tasks WHERE id IN ({placeholders})", tuple(task_ids))
+        await db.commit()
+        return cursor.rowcount
+

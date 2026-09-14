@@ -26,6 +26,7 @@ class GenerateRequest(BaseModel):
     cfg: float = Field(7.0, ge=1.0, le=30.0)
     width: int = Field(1024, ge=256, le=2048)
     height: int = Field(1024, ge=256, le=2048)
+    denoise: float = Field(0.62, ge=0.0, le=1.0, description="Denoising strength for img2img/retouch")
     seed: int = Field(-1, description="-1 for random")
     lora: str = Field("", description="Optional LoRA filename (without extension)")
     lora_strength: float = Field(0.8, ge=0.0, le=2.0)
@@ -57,14 +58,18 @@ async def generate_auto(
     background_tasks: BackgroundTasks,
     prompt: str = Form(...),
     negative_prompt: str = Form(""),
+    workflow: str = Form(""),
     width: int = Form(1024),
     height: int = Form(1024),
+    denoise: float = Form(0.62),
     seed: int = Form(-1),
     image: UploadFile | None = File(None),
 ):
     """
-    智能生成:平台固定模型与规范参数。
-    无参考图 → Z-Image Turbo 文生图;附参考图 → Wan2.2 I2V 角色锚定视频(首帧=参考图)。
+    智能生成: 自动识别或匹配工作流。
+    - photo_cinematic_retouch: 摄影大师旅行照片重构
+    - 附参考图且未指定: Wan2.2 I2V 视频
+    - 无参考图: Z-Image Turbo 极速文生图
     """
     if get_system_mode() == "training":
         raise HTTPException(status_code=409, detail="System is occupied by training")
@@ -78,8 +83,20 @@ async def generate_auto(
         upload_dir.mkdir(exist_ok=True)
         (upload_dir / image_filename).write_bytes(data)
 
-    if image_filename:
+    if workflow == "photo_cinematic_retouch":
+        steps = 12
+        cfg = 1.5
+        length = None
+        stored = image_filename
+        if image_filename:
+            stored = await comfy_client.upload_image(
+                (Path(__file__).parent.parent / "uploads" / image_filename).read_bytes(),
+                image_filename,
+            )
+    elif image_filename:
         workflow = "video_wan22_ti2v_5b_i2v"
+        steps = 20
+        cfg = 5.0
         length = 121
         stored = await comfy_client.upload_image(
             (Path(__file__).parent.parent / "uploads" / image_filename).read_bytes(),
@@ -87,6 +104,8 @@ async def generate_auto(
         )
     else:
         workflow = "image_z_image_turbo"
+        steps = 8
+        cfg = 1.0
         length = None
         stored = ""
 
@@ -94,8 +113,9 @@ async def generate_auto(
         "prompt": prompt,
         "negative_prompt": negative_prompt,
         "workflow": workflow,
-        "steps": 8 if not image_filename else 20,
-        "cfg": 1.0 if not image_filename else 5.0,
+        "steps": steps,
+        "cfg": cfg,
+        "denoise": denoise,
         "width": width,
         "height": height,
         "seed": seed,

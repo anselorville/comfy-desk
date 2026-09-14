@@ -11,11 +11,21 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from services import skill_store
+from services.prompt_stylist import list_travel_categories, list_travel_sub_scenarios
 from services.task_store import create_task
 from services.generation_runner import run_generation_task
 from api.system import get_system_mode
 
 router = APIRouter()
+
+
+@router.get("/skills/travel-scenarios")
+async def get_travel_scenarios(category: str = "all"):
+    """Get full travel photography sub-scenarios and categories."""
+    return {
+        "categories": list_travel_categories(),
+        "scenarios": list_travel_sub_scenarios(category),
+    }
 
 
 class SkillSpec(BaseModel):

@@ -44,6 +44,8 @@ async def run_generation_task(task_id: str, workflow_name: str, params: dict) ->
         await update_task(task_id, progress=30)
 
         images = await comfy_client.wait_for_completion(prompt_id, client_id, task_id)
+        if not images:
+            raise RuntimeError("ComfyUI 未生成预期的输出文件")
         await update_task(task_id, status=TaskStatus.DONE, progress=100, images=images)
 
     except Exception as exc:

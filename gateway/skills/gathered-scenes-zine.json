@@ -1,0 +1,19 @@
+{
+  "id": "gathered-scenes-zine",
+  "name": "🧩 拾景纸刊·撕纸拼贴 (Gathered Scenes Zine)",
+  "description": "撕纸拼贴纸刊感：保留照片真实质感，边缘手撕纸纤维，细节压成几块大色块",
+  "workflow": "photo_cinematic_retouch",
+  "tags": ["photo", "zine", "collage", "paper", "torn", "editorial", "i2i"],
+  "prompt_template": "{subject}, gathered scenes zine collage, real photo as visual anchor, abstract shapes and single high-chroma color extending to paper, hand-torn paper fiber edges, visible print imperfection, restrained composition, paper zine texture",
+  "negative_prompt_template": "commercial poster, glossy finish, clean digital vector, chaotic collage clutter, oversaturated, fake vintage texture, UI overlay, watermark",
+  "defaults": {
+    "subject": "the uploaded photograph",
+    "steps": 12,
+    "cfg": 1.5,
+    "denoise": 0.65,
+    "seed": -1,
+    "image_filename": ""
+  },
+  "fields": ["image_filename", "subject", "steps", "cfg", "denoise", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}

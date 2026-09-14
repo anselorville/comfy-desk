@@ -1,0 +1,19 @@
+{
+  "id": "photo-abstract-editorial",
+  "name": "🎨 克制美学·几何编辑 (Photo Abstract Editorial)",
+  "description": "上半保留原照片，下半抽成极简几何+英文标题，高级到能直接当品牌视觉",
+  "workflow": "photo_cinematic_retouch",
+  "tags": ["photo", "abstract", "editorial", "minimal", "geometric", "brand", "i2i"],
+  "prompt_template": "{subject}, editorial photo abstraction, upper half original photograph preserved, lower half distilled into minimal geometric shapes with small English title, restrained aesthetic, clean negative space, muted palette, brand visual identity, flat printmaking language",
+  "negative_prompt_template": "rewrite the photograph, redraw the photo content, heavy ornament, loud gradient, collage clutter, UI overlay, watermark, oversaturated",
+  "defaults": {
+    "subject": "the uploaded photograph",
+    "steps": 12,
+    "cfg": 1.5,
+    "denoise": 0.65,
+    "seed": -1,
+    "image_filename": ""
+  },
+  "fields": ["image_filename", "subject", "steps", "cfg", "denoise", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "pixel-style-poster",
+  "name": "🔳 像素点阵海报 (Pixel Bitmap Poster)",
+  "description": "老式激光打印机印在米白纸上的点阵印刷感海报，花卉/动物/近景人脸效果绝佳",
+  "workflow": "image_z_image_turbo",
+  "tags": ["poster", "pixel", "bitmap", "halftone", "editorial", "t2i"],
+  "prompt_template": "{subject}, fine bitmap editorial poster, vertical 3:4 canvas, large dot-matrix halftone subject, monochrome or two-color ink, soft tonal transition through pixel density, warm off-white paper with subtle fibers, low-resolution print texture, restrained microtype caption, Japanese editorial feeling",
+  "negative_prompt_template": "chunky pixel art, retro game 8-bit, flat solid color without tonal transition, neon contrast, cartoon sticker, chaotic layout, cinematic realism, watermark",
+  "defaults": {
+    "subject": "a graceful flower",
+    "steps": 8,
+    "cfg": 1.0,
+    "width": 768,
+    "height": 1024,
+    "seed": -1
+  },
+  "fields": ["subject", "steps", "cfg", "width", "height", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}

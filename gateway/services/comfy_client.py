@@ -66,7 +66,7 @@ async def wait_for_completion(
     prompt_id: str,
     client_id: str,
     task_id: str | None = None,
-    timeout: float = 1200.0,
+    timeout: float = 14400.0,
 ) -> list[str]:
     """
     Connect to ComfyUI WebSocket and wait until the prompt finishes.
@@ -117,6 +117,7 @@ async def wait_for_completion(
         await asyncio.wait_for(_listen(), timeout=timeout)
     except asyncio.TimeoutError:
         logger.warning("ComfyUI prompt %s timed out after %ss", prompt_id, timeout)
+        raise TimeoutError(f"ComfyUI 渲染任务在 {int(timeout)} 秒内未完成，超时中断")
     except Exception as e:
         logger.warning("WebSocket listener notice: %s", e)
 
@@ -191,6 +192,10 @@ async def ensure_image_in_input(ref_image: str) -> str:
             img_bytes = base64.b64decode(data_str)
             fn = f"upload_{uuid.uuid4().hex[:8]}.{ext}"
             (input_dir / fn).write_bytes(img_bytes)
+            try:
+                await upload_image(img_bytes, fn)
+            except Exception as up_err:
+                logger.debug("Local upload_image: %s", up_err)
             logger.info("Saved base64 ref image to input/%s", fn)
             return fn
         except Exception as e:

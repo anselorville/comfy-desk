@@ -27,7 +27,11 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  scroll-padding-top: 5rem;
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;

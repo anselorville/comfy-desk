@@ -111,10 +111,29 @@ export interface StylePreset {
   prompt_prefix: string;
 }
 
+export interface TravelCategory {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface TravelScenario {
+  id: string;
+  category: string;
+  label: string;
+  description: string;
+  camera_lens: string;
+  film_stock: string;
+  lighting: string;
+  color_grade: string;
+  aesthetic: string;
+  denoise: number;
+}
+
 export interface A2AChatRequest {
   message: string;
   ref_image?: string;
-  mode?: "auto" | "image" | "video" | "storyboard";
+  mode?: "auto" | "image" | "video" | "storyboard" | "retouch";
   aspect_ratio?: string;
   preview?: boolean;
 }
@@ -136,6 +155,7 @@ export interface GenerateRequest {
   workflow?: string;
   steps?: number;
   cfg?: number;
+  denoise?: number;
   width?: number;
   height?: number;
   seed?: number;
@@ -310,8 +330,18 @@ export function subscribeTaskStream(taskId: string, onProgress: (t: TaskResponse
   return () => es.close();
 }
 
-export async function fetchArtifacts(status = "done", limit = 50): Promise<{ artifacts: Artifact[] }> {
+export async function fetchArtifacts(status = "done", limit = 100): Promise<{ artifacts: Artifact[] }> {
   const res = await fetch(`${API_BASE}/artifacts?status=${status}&limit=${limit}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteArtifacts(filenames: string[], ids: string[] = []): Promise<{ success: boolean; deleted_count: number }> {
+  const res = await fetch(`${API_BASE}/artifacts/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filenames, ids }),
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -375,4 +405,13 @@ export async function startTraining(epochLimit: number, learningRate: number): P
     body: JSON.stringify({ epoch_limit: epochLimit, learning_rate: learningRate }),
   });
   if (!res.ok) throw new Error(await res.text());
+}
+
+export async function fetchTravelScenarios(category: string = "all"): Promise<{
+  categories: TravelCategory[];
+  scenarios: TravelScenario[];
+}> {
+  const res = await fetch(`${API_BASE}/skills/travel-scenarios?category=${encodeURIComponent(category)}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }

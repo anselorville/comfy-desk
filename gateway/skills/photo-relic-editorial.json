@@ -1,0 +1,19 @@
+{
+  "id": "photo-relic-editorial",
+  "name": "🖼️ 纸上留影·版画印记 (Photo Relic Editorial)",
+  "description": "上半保留照片，下半淡墨勾勒出版画，建筑/天际线/水面都很有味道，最可控",
+  "workflow": "photo_cinematic_retouch",
+  "tags": ["photo", "relic", "editorial", "printmaking", "architecture", "ink", "i2i"],
+  "prompt_template": "{subject}, photo relic editorial, upper half preserved photograph, lower half light-ink printmaking etching of the scene, architecture skyline water motif, warm paper panel, flat ink blocks, negative-space cuts, sparse lines, one small warm accent, small English title",
+  "negative_prompt_template": "rewrite the photograph, beautify the photo, fake vintage texture, heavy watercolor, decorative geometry unrelated to photo, stickers, UI overlay, watermark",
+  "defaults": {
+    "subject": "the uploaded photograph",
+    "steps": 12,
+    "cfg": 1.5,
+    "denoise": 0.62,
+    "seed": -1,
+    "image_filename": ""
+  },
+  "fields": ["image_filename", "subject", "steps", "cfg", "denoise", "seed"],
+  "created_at": "2026-09-04T00:00:00+00:00"
+}
