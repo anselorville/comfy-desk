@@ -54,3 +54,5 @@ Ensure any new code is placed in its proper bounded context based on the followi
 ## 5. Git & Contributions
 - Validate against `.gitignore` before executing `git add` to avoid committing large folders (e.g., `.venv`, `comfy-ui/`, `frontend/node_modules/`, `*.safetensors`). The engine checkout (`comfy-ui/`) must NEVER enter this repo's history — provision/update it with `bash startup/bootstrap-comfyui.sh`.
 - Provide human-readable, context-rich commit messages.
+- Keep code and capability documentation synchronized: when a reusable generation technique, workflow field, or skill behavior is added or changed, update the relevant Markdown/skill JSON in the same change.
+- Commit and push documentation/code changes promptly after validation; do not leave completed repository work only in the working tree.
