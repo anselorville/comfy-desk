@@ -46,6 +46,9 @@ ComfyDesk 重新定义了 ComfyUI 的交互范式：从「复杂低效的手工�
 | `comfyui-character-consistency` | `~/.agents/skills/comfyui-character-consistency` | 角色一致性锚定与多镜头人物维持 |
 | `comfyui-resource-manager` | `~/.agents/skills/comfyui-resource-manager` | 22GB VRAM 显存调度与 Turing 架构优化 |
 | `a2a-comfydesk-client` | `~/.agents/skills/a2a-comfydesk-client` | 外部 Agent 连接 ComfyDesk 的标准协议规范 |
+| `seedance-prompt-library` | `skills/seedance-prompt-library`（含 12 个分类 Skill） | [awesome-seedance](https://github.com/LearnPrompt/awesome-seedance) 实测提示语模板库：463 条已验证 Seedance 案例蒸馏出的类型化模板（时间轴分镜、接触点动作、器材缺陷真实感等），中英双语，MIT/CC BY 4.0 |
+
+> **Seedance 技能层说明**：`skills/seedance-*`（12 个）来自 awesome-seedance 上游，是「模板层」，与 `ai-video-director`（方法论层）和 `comfyui-character-consistency`（一致性层）互补。上游每日更新，更新方式：`cd /data/git_repository/awesome-seedance && git pull`（全局技能通过软链自动跟随）。
 
 ---
 
