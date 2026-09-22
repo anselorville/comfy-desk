@@ -1,0 +1,13 @@
+{
+  "name": "Qwen-Image-2.1 T2I (GGUF 无限制版)",
+  "description": "Qwen-Image-2.1 文生图:GGUF Q4_K_M 量化 DiT(~4.6GB 显存)+ Qwen3-VL 8B int8 文本编码器(内存 offload)。官方模板参数:25 步 euler/simple,cfg 1.0。本地无安全检查器。来源:abenzerps/Qwen-Image-2.1-GGUF(Qwen Research License,仅限非商业研究/评估)。",
+  "fields": [
+    { "name": "positive_prompt", "type": "string", "label": "Prompt", "default": "" },
+    { "name": "negative_prompt", "type": "string", "label": "Negative Prompt", "default": "" },
+    { "name": "width", "type": "number", "label": "宽度", "default": 1024 },
+    { "name": "height", "type": "number", "label": "高度", "default": 1024 },
+    { "name": "steps", "type": "number", "label": "Steps", "default": 25 },
+    { "name": "cfg", "type": "number", "label": "CFG", "default": 1.0 },
+    { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
+  ]
+}

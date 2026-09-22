@@ -1,0 +1,28 @@
+{
+  "id": "qwen-image-21-t2i",
+  "name": "Qwen-Image-2.1 文生图 (GGUF)",
+  "description": "Qwen-Image-2.1 本地无限制文生图:GGUF Q4_K_M DiT 进显存,Qwen3-VL 8B int8 编码器走内存。原生支持 2K(2048×2048),推荐 1MP 起步。官方参数 25 步 euler/simple cfg 1.0。提示词建议中英皆可(Qwen3-VL 编码器)。权重受 Qwen Research License 约束,仅限非商业研究/评估。",
+  "workflow": "image_qwen21_t2i",
+  "tags": ["image", "t2i", "qwen", "gguf", "uncensored"],
+  "prompt_template": "{positive_prompt}",
+  "negative_prompt_template": "{negative_prompt}",
+  "defaults": {
+    "positive_prompt": "",
+    "negative_prompt": "",
+    "width": 1024,
+    "height": 1024,
+    "steps": 25,
+    "cfg": 1.0,
+    "seed": -1
+  },
+  "fields": [
+    { "name": "positive_prompt", "type": "string", "label": "Prompt", "default": "" },
+    { "name": "negative_prompt", "type": "string", "label": "Negative Prompt", "default": "" },
+    { "name": "width", "type": "number", "label": "宽度", "default": 1024 },
+    { "name": "height", "type": "number", "label": "高度", "default": 1024 },
+    { "name": "steps", "type": "number", "label": "Steps", "default": 25 },
+    { "name": "cfg", "type": "number", "label": "CFG", "default": 1.0 },
+    { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
+  ],
+  "created_at": "2026-09-22T00:00:00+00:00"
+}

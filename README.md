@@ -47,6 +47,7 @@ ComfyDesk 重新定义了 ComfyUI 的交互范式：从「复杂低效的手工�
 | `comfyui-resource-manager` | `~/.agents/skills/comfyui-resource-manager` | 22GB VRAM 显存调度与 Turing 架构优化 |
 | `a2a-comfydesk-client` | `~/.agents/skills/a2a-comfydesk-client` | 外部 Agent 连接 ComfyDesk 的标准协议规范 |
 | `seedance-prompt-library` | `skills/seedance-prompt-library`（含 12 个分类 Skill） | [awesome-seedance](https://github.com/LearnPrompt/awesome-seedance) 实测提示语模板库：463 条已验证 Seedance 案例蒸馏出的类型化模板（时间轴分镜、接触点动作、器材缺陷真实感等），中英双语，MIT/CC BY 4.0 |
+| `qwen-image-21-t2i` | `gateway/skills/qwen-image-21-t2i.json` | Qwen-Image-2.1 文生图（GGUF Q4_K_M + Qwen3-VL int8 TE）。依赖：ComfyUI-GGUF 已换 leejet fork；引擎需应用 `patches/0001-feat-Qwen-image-2.1-support-CORE-423-16400.patch`（v0.33.0 回移 CORE-423，bootstrap 重装引擎后必须重打：`git -C comfy-ui am patches/0001-*.patch`）。权重 Qwen Research License，仅限非商业研究/评估 |
 
 > **Seedance 技能层说明**：`skills/seedance-*`（12 个）来自 awesome-seedance 上游，是「模板层」，与 `ai-video-director`（方法论层）和 `comfyui-character-consistency`（一致性层）互补。上游每日更新，更新方式：`cd /data/git_repository/awesome-seedance && git pull`（全局技能通过软链自动跟随）。
 
