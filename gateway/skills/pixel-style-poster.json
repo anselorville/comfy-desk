@@ -10,8 +10,8 @@
     "subject": "a graceful flower",
     "steps": 8,
     "cfg": 1.0,
-    "width": 768,
-    "height": 1024,
+    "width": 576,
+    "height": 768,
     "seed": -1
   },
   "fields": ["subject", "steps", "cfg", "width", "height", "seed"],

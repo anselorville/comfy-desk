@@ -13,8 +13,8 @@
     "negative_prompt": "",
     "steps": 8,
     "cfg": 1.0,
-    "width": 1344,
-    "height": 1344,
+    "width": 1008,
+    "height": 1008,
     "seed": -1,
     "filename_prefix": "portrait_character_reference_sheet"
   },

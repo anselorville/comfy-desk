@@ -10,8 +10,8 @@
     "subject": "a young Chinese woman in flowing Hanfu emerging from a dark reflective lake under ancient golden-leaved trees",
     "steps": 8,
     "cfg": 1.0,
-    "width": 1280,
-    "height": 720,
+    "width": 960,
+    "height": 540,
     "seed": -1
   },
   "fields": ["subject", "steps", "cfg", "width", "height", "seed"],
