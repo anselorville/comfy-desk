@@ -1,0 +1,28 @@
+{
+  "id": "guofeng-cinematic-portrait",
+  "name": "🏯 古风水墨·电影人像 (Guofeng Cinematic Portrait)",
+  "description": "汉服 × 透光水汽 × 黑金琥珀色调 × 电影质感的人像/场景提示词,适用于古风单人、双人对望、群像夜景、雨后等高情绪主题。叙事感强、克制的负向空间,出片类似王家卫+黑泽明的东方电影剧照。",
+  "workflow": "image_z_image_turbo",
+  "tags": ["guofeng", "ancient-china", "hanfu", "cinematic", "portrait", "editorial", "t2i", "wong-kar-wai", "kurosawa"],
+  "prompt_template": "{subject}, ancient Chinese cinematic portrait, wong kar wai + kurosawa aesthetic, Hanfu silk and gold tassels drifting in mist, dark reflective water or lacquered wood, strong Tyndall god rays cutting through incense smoke, restrained color palette of black, antique gold, amber, ivory and jade, moody low-key lighting with luminous rim light, shallow depth of field, anamorphic bokeh, photorealistic textures, medium format film grain, emotional restraint, poetic negative space, masterpiece composition, 8k editorial still",
+  "negative_prompt_template": "cgi 3d render, cartoon anime illustration, oversaturated neon, plastic skin, modern contemporary clothing, western architecture, watermark signature, text overlay, busy cluttered background, harsh direct flash, flat lighting, two left hands, deformed fingers, bad anatomy, extra limbs, blurry face, cropped feet, identity drift",
+  "defaults": {
+    "subject": "a young Chinese woman in flowing Hanfu emerging from a dark reflective lake under ancient golden-leaved trees",
+    "steps": 8,
+    "cfg": 1.0,
+    "width": 1280,
+    "height": 720,
+    "seed": -1
+  },
+  "fields": ["subject", "steps", "cfg", "width", "height", "seed"],
+  "style_recipe": {
+    "anchor_directors": ["wong kar wai", "kurosawa"],
+    "palette": ["black", "antique gold", "amber", "ivory", "jade", "deep crimson"],
+    "lighting_grammar": ["Tyndall god rays", "rim light", "low-key", "incense smoke", "dappled light", "lantern glow"],
+    "materials": ["Hanfu silk", "gold tassels", "lacquered wood", "dark water", "stone", "rice paper"],
+    "atmosphere": ["misty", "rain-wet", "post-rain droplets", "night market lanterns", "mountain cottage morning"],
+    "lens": "shallow DoF, anamorphic bokeh, medium format film grain",
+    "mood_keywords": ["emotional restraint", "poetic negative space", "cinematic editorial", "masterpiece composition"]
+  },
+  "created_at": "2026-10-17T00:00:00+00:00"
+}

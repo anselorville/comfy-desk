@@ -91,6 +91,7 @@ triggers:
 | `photo-relic-editorial` | 🖼️ 纸上留影·版画印记 | 照片（建筑/天际线/水面） | `photo_cinematic_retouch` (图生图) |
 | `travel-photo-abstraction` | 🗺️ 旅行照片抽象 | 旅行照片 | `photo_cinematic_retouch` (图生图) |
 | `gathered-scenes-zine` | 🧩 拾景纸刊·撕纸拼贴 | 照片 | `photo_cinematic_retouch` (图生图) |
+| `guofeng-cinematic-portrait` | 🏯 古风水墨·电影人像 | 一句话/主题（汉服+水汽/夜色/群像） | `image_z_image_turbo` (文生图) |
 
 **通用风格语法**（各 skill prompt 已内嵌）：
 - 纸刊风：`large negative space, paper texture, print scan reproduction, single color accent, restrained typography`
@@ -144,6 +145,85 @@ Resolve contradictions before generation. For example, “shallow depth of field
 foreground legs and shoes all sharp”; prefer a nearly textureless background and moderate aperture when several
 planes must remain legible. If the user asks for “natural” or “高级”, translate it into visible choices instead
 of leaving those words unexplained.
+
+### 8.5.1 🏯 Ancient China / Guofeng Cinematic Recipe
+
+源自对一组 5 张同系列参考图的逆向工程（汉服·水汽·琥珀金·电影剧照）。当用户的 plain request
+落到「古风 / 国风 / 仙侠 / 东方 / hanfu / 王家卫 / 黑泽明 / 古装」任意关键词时，套用本 recipe，
+**不要套用 §1（cinematic photorealism）或 §9（paper zine）**——这两套语料会把古风推往西式 portrait
+或平面海报，丢失东方影像的克制感。
+
+**必填四元组**（缺一就丢味儿）：
+
+1. **导演锚点（anchor_directors）**：必须同时点名 `wong kar wai` + `kurosawa`（或同级 `zhang yimou` /
+   `hou hsiao-hsien`）。这两个名字锁定的是「低饱和+高对比+情绪留白」的曝光语言，比单写
+   `cinematic lighting` 信息量大 10 倍。
+2. **服装与材质（material_grammar）**：明确 `Hanfu silk` 而非 `clothing`；明确 `gold tassels,
+   lacquered wood, dark water, rice paper, jade` 等可触材质；避免 `dress, robe, fabric` 这类无质感词。
+3. **光线语法（lighting_grammar）**：从 `Tyndall god rays, rim light, low-key, incense smoke,
+   dappled light, lantern glow, post-rain droplets` 中选 ≥2。这是这种风格的「灵魂」——少了
+   Tyndall + 雾气就只剩「穿汉服的人」而不是「东方电影剧照」。
+4. **调色约束（palette_grammar）**：明确点出 `black, antique gold, amber, ivory, jade, deep crimson`。
+   写「warm tones」等于没写——必须给具体色名，让 model 在 latent space 里命中对的色彩簇。
+
+**改写后的 prompt 必须包含的句式**（按出现顺序）：
+
+```text
+[主体+动作] + ancient Chinese cinematic portrait + wong kar wai + kurosawa aesthetic +
+[服装材质 drifting in 雾气/水汽/烛光] + [光:Tyndall/rim/low-key + 至少一种光源修饰]
++ restrained color palette of [具体色名] + shallow depth of field, anamorphic bokeh,
+medium format film grain + emotional restraint, poetic negative space + masterpiece composition
+```
+
+**必带的负向词**（与 §1 / §9 不同的部分）：
+`modern contemporary clothing, western architecture, busy cluttered background, oversaturated neon,
+two left hands, deformed fingers, identity drift`——前两条是古风特有的「防止穿越到现代」护栏。
+
+**女性主体附加规则**（与 §8.5 共用 checklist，并叠加）：
+- 「wet」= 头发丝缕贴在脸上 + 睫毛/嘴唇挂水珠 + 汉服半透湿贴 = 雨后出浴镜头语言；写 `wet hair` 但
+  不点 `water droplets on skin and lashes` 的话，model 只会出「头发颜色变深」，不出一致性水珠。
+- 「drifting in wind」= 衣袖飘向一侧 + 飘带反向 + 头发朝同方向 + 落叶/花瓣做运动矢量参照。
+- 「close-up portrait」场景下，明确点出哪些身体局部进画面（额头到锁骨 / 半张脸 / 单只眼睛），
+  否则 model 会给全身像，破坏情绪。
+- 不要给古风人物加「现代妆容」修饰词（`smokey eye, gloss lips`）——会触发西式 glamour 风格污染。
+
+**Male counterpart 写法**（与女性版镜像，做性别对位时用）：
+`young Chinese man, wet black hair plastered across face, droplets on lashes and lips,
+emerging from dark reflective water, translucent ivory silk and gold tassels drifting in foreground`。
+**mirror-not-copy** 原则：构图/光线/材质三件套不变，但男性版的「tassel」「ivory silk」要换成
+更哑光的同语义元素（`raw linen, dark leather cord`），避免女性化色彩污染。
+
+**群像场景（如夜景夜市、群像回眸）扩展**：
+- 明确人数与性别比（`five friends, three men and two women`）；
+- 明确「no one looking at camera」+「laughing / mid-conversation」+ 每人一个独立动作（浇水/整理袖口/仰头饮酒）；
+- 背景用 `lantern-lit night market, drifting silk, incense smoke, red-and-gold lanterns, bokeh of city
+  towers behind` 做层次分三层：人物清晰 → 灯笼中景虚化 → 远景塔楼 bokeh。
+
+**Quiet 变体**（`raw` 风格 / 极低 chaos 时的对照）：
+
+当用户说「日常感」「自然光」「清晨」时，关掉 Tyndall 和雾气，切换到：
+`raw style, sunlit mountain cottage, wooden lattice window framing, steaming tea, open book,
+climbing jasmine, dappled morning light, --stylize 450 --chaos 4`。这套用来给一整组古风
+图做"反差呼吸"，避免全部都是神光+雾气的高强度。
+
+**Comfy-Desk 参数推荐**（与 §9 同）：
+- 文生图走 `image_z_image_turbo`，`steps 8 / cfg 1.0`；
+- 当用户指定 `--ar 16:9` 时用 `width 1280 / height 720`；指定 `--ar 9:16` 时用
+  `width 720 / height 1280`（竖版人物肖像/全身像）。
+- chaos 越高，画面越"奇幻"（雾气更重、配色更超现实）；chaos < 5 接近写实古风，chaos > 10 进入
+  神话/仙侠。建议日常：6–8；神话/夜宴：10–12。
+
+**自检 checklist**（改写完自己跑一遍，缺项回炉）：
+- [ ] 写了 ≥2 个导演锚点？
+- [ ] 列了具体色名而非「warm / muted」？
+- [ ] 写了 ≥2 种光语法（Tyndall/rim/low-key/incense/dappled/lantern）？
+- [ ] 写明了材质（silk / tassel / lacquer / water / paper）而非 `clothing`？
+- [ ] 负向词包含 `modern contemporary clothing` 和 `western architecture`？
+- [ ] 雨后/夜场主题里写了 `water droplets on skin and lashes` 或 `lantern glow` 这种具体
+      局部修饰，而不是只写 `mood`？
+
+参考实现见 `gateway/skills/guofeng-cinematic-portrait.json`，前端点选与 `/api/v1/skills`
+直接调起均可。
 
 ### Female portrait fidelity checklist
 
