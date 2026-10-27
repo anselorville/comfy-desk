@@ -26,6 +26,7 @@
 | `image_qwen21_t2i` | Qwen-Image-2.1 GGUF | 无限制文生图（NSFW 提示词无审查） |
 | `photo_cinematic_retouch` | Z-Image i2i | 照片电影感重塑 |
 | `video_wan22_ti2v_5b` / `_i2v` | Wan2.2 5B | 默认视频引擎（22GB 友好） |
+| `video_wan21_13b_nsfw_t2v` | Wan2.1 1.3B NSFW exp_e14 | 无审查 NSFW 文生视频（8GB 显存，可共存生图） |
 | `video_minimax_h3_t2v` / `_i2v` | MiniMax H3 | 高质量视频（带原生音频，慢） |
 
 ## 依赖模型（宿主机路径）
@@ -38,7 +39,10 @@
 | z_image_turbo_bf16.safetensors | diffusion_models/ | Comfy-Org/Z-Image-Turbo |
 | qwen_3_4b.safetensors | text_encoders/ | Comfy-Org/Z-Image-Turbo |
 | ae.safetensors | vae/ | Z-Image VAE |
-| Z-Image-Turbo-Fun-Controlnet-Union-2.1-lite-2602-8steps.safetensors | model_patches/ | alibaba-pai (HF)，sha256 见 `.sha256` 旁车文件 |
+| Z-Image-Turbo-Fun-Controlnet-Union-2.1-lite-2602-8steps.safetensors | model_patches/ | alibaba-pai (HF)，sha256 见 `gateway/workflows/model-checksums.sha256` |
+| wan2.1_t2v_1.3B_nsfw_exp_e14.safetensors | diffusion_models/ | NSFW-API/NSFW_Wan_1.3b (HF) |
+| wan_2.1_vae.safetensors | vae/ | Comfy-Org/Wan_2.1_ComfyUI_repackaged (HF) |
+| umt5_xxl_fp8_e4m3fn_scaled.safetensors | text_encoders/ | 已有（Wan2.2 共用） |
 | qwen-image-2.1-Q4_K_M.gguf | diffusion_models/ | Qwen-Image-2.1 |
 
 ## 姿势参考工作流（image_z_image_pose）
