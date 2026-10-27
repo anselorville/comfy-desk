@@ -3,6 +3,8 @@ POST /api/v1/caption — upload an image, get JoyCaption description
 """
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
+import httpx
+from PIL import UnidentifiedImageError
 
 from services.caption_client import caption_image, CAPTION_PROMPTS
 
@@ -32,12 +34,27 @@ async def create_caption(
     if len(image_bytes) > 50 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image too large (max 50MB)")
 
-    caption = await caption_image(
-        image_bytes,
-        style=style,
-        max_tokens=max_tokens,
-        temperature=temperature,
-    )
+    try:
+        caption = await caption_image(
+            image_bytes,
+            style=style,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+    except UnidentifiedImageError as e:
+        raise HTTPException(
+            status_code=400, detail="Could not decode image (invalid or corrupt file)"
+        ) from e
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"JoyCaption upstream returned {e.response.status_code}",
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=503,
+            detail="JoyCaption service unreachable (is the vLLM server running?)",
+        ) from e
     return CaptionResponse(caption=caption, style=style)
 
 
