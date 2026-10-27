@@ -1,0 +1,15 @@
+[Unit]
+Description=ComfyDesk Next.js frontend :3000
+After=network-online.target comfydesk-gateway.service
+Wants=network-online.target
+
+[Service]
+User=anse10rville
+WorkingDirectory=/data/git_repository/comfy-desk/frontend
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p 3000
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

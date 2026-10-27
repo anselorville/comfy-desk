@@ -1,0 +1,15 @@
+[Unit]
+Description=ComfyDesk ComfyUI engine :8188
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=anse10rville
+WorkingDirectory=/data/git_repository/comfy-desk/comfy-ui
+ExecStart=/data/git_repository/comfy-desk/.venv/bin/python main.py --listen 0.0.0.0 --port 8188
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
