@@ -118,16 +118,29 @@ services:
 
   # ── JoyCaption via vLLM ────────────────────────────────────────────────────
   joycaption:
-    image: vllm/vllm-openai:latest
+    # Pinned: host driver 535 (CUDA 12.2, GeForce, no forward-compat). The
+    # CUDA 13.x `latest` image aborts with "Error 804"; the CUDA 12.9 build
+    # ships a torchcodec .so linked against CUDA 13 and fails at import.
+    # CUDA 12.4 (v0.8.5) runs on this driver via minor-version compat.
+    image: vllm/vllm-openai:v0.8.5
     container_name: comfydesk_joycaption
+    # Drop the image's forward-compat libcuda so libcuda resolves to the host
+    # 535 driver.
+    entrypoint:
+      - /bin/bash
+      - -c
+      - "rm -f /usr/local/cuda*/compat/libcuda.so* 2>/dev/null; exec python3 -m vllm.entrypoints.openai.api_server \"$@\""
+      - --
     command: >
       --model fancyfeast/llama-joycaption-beta-one-hf-llava
       --max-model-len 4096
       --enable-prefix-caching
-      --gpu-memory-utilization 0.45
+      --dtype float16
+      --gpu-memory-utilization ${JOYCAPTION_GPU_UTIL:-0.9}
       --port 8000
     environment:
       - HF_HOME=/root/.cache/huggingface
+      - HF_HUB_OFFLINE=1
     volumes:
       - hf_cache:/root/.cache/huggingface
     ports:
@@ -142,7 +155,11 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
-    # NOTE: JoyCaption takes ~10GB VRAM. ComfyUI uses ~8-12GB for SDXL.
-    # Both fit in 22GB but margin is tight. If OOM, stop one service.
+    # NOTE: beta-one fp16 weights are ~17GB, so runtime needs ~18-19GB and
+    # JOYCAPTION_GPU_UTIL must be ~0.9 (0.45 cannot even load the weights).
+    # On a 22GB card JoyCaption and ComfyUI therefore CANNOT run concurrently:
+    #   docker compose stop comfyui      # while captioning
+    #   docker compose stop joycaption   # while generating
+    # --dtype float16 is required on Turing (SM 7.5), which has no bf16.
     shm_size: "8gb"
     ipc: host
