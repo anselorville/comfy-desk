@@ -1,0 +1,60 @@
+{
+  "name": "NSFW Video T2V (Wan2.1 1.3B uncensored)",
+  "description": "无审查 NSFW 文生视频。基于 Wan2.1 T2V 1.3B 微调检查点 exp_e14（混合图文训练修正版，无需 motion LoRA，原生连贯运动）。提示词参考 nsfw_wan_prompting_guide.json（ subreddit 标签体系）。1.3B 仅占约 8GB 显存，可与生图共存。",
+  "type": "video",
+  "engine": "Wan2.1 T2V 1.3B (NSFW-API exp_e14) + UMT5-XXL fp8 + Wan2.1 VAE",
+  "category": "video-nsfw",
+  "base_model": "Wan-AI/Wan2.1-T2V-1.3B",
+  "upstream": "https://huggingface.co/NSFW-API/NSFW_Wan_1.3b",
+  "prompting_guide": "nsfw_wan_prompting_guide.json (同目录)",
+  "fields": [
+    {
+      "name": "positive_prompt",
+      "type": "string",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "negative_prompt",
+      "type": "string",
+      "label": "Negative Prompt",
+      "default": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+    },
+    {
+      "name": "steps",
+      "type": "number",
+      "label": "Steps",
+      "default": 30
+    },
+    {
+      "name": "cfg",
+      "type": "number",
+      "label": "CFG",
+      "default": 6.0
+    },
+    {
+      "name": "width",
+      "type": "number",
+      "label": "Width",
+      "default": 832
+    },
+    {
+      "name": "height",
+      "type": "number",
+      "label": "Height",
+      "default": 480
+    },
+    {
+      "name": "length",
+      "type": "number",
+      "label": "Frames (16fps, 4n+1)",
+      "default": 33
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1
+    }
+  ]
+}
