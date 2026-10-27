@@ -22,7 +22,7 @@
       "name": "controlnet_strength",
       "type": "number",
       "label": "Pose Strength",
-      "default": 0.8
+      "default": 0.35
     },
     {
       "name": "steps",

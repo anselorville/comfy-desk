@@ -67,7 +67,7 @@
     "class_type": "ZImageFunControlnet",
     "inputs": {
       "model": [
-        "11",
+        "28",
         0
       ],
       "model_patch": [

@@ -30,6 +30,8 @@ class GenerateRequest(BaseModel):
     seed: int = Field(-1, description="-1 for random")
     lora: str = Field("", description="Optional LoRA filename (without extension)")
     lora_strength: float = Field(0.8, ge=0.0, le=2.0)
+    image_filename: str = Field("", description="Existing ComfyUI input filename for reference workflows")
+    controlnet_strength: float = Field(0.35, ge=0.0, le=2.0, description="Pose ControlNet strength")
     length: int = Field(121, ge=1, le=999, description="Video frames at 24fps (video workflows only)")
 
 @router.post("/generate")
@@ -64,6 +66,7 @@ async def generate_auto(
     denoise: float = Form(0.62),
     seed: int = Form(-1),
     image: UploadFile | None = File(None),
+    controlnet_strength: float = Form(0.35),
 ):
     """
     智能生成: 自动识别或匹配工作流。
@@ -93,6 +96,17 @@ async def generate_auto(
                 (Path(__file__).parent.parent / "uploads" / image_filename).read_bytes(),
                 image_filename,
             )
+    elif workflow == "image_z_image_pose":
+        steps = 8
+        cfg = 1.0
+        length = None
+        stored = image_filename
+        if not stored:
+            raise HTTPException(status_code=400, detail="image_z_image_pose requires a pose reference image")
+        stored = await comfy_client.upload_image(
+            (Path(__file__).parent.parent / "uploads" / image_filename).read_bytes(),
+            image_filename,
+        )
     elif image_filename:
         workflow = "video_wan22_ti2v_5b_i2v"
         steps = 20
@@ -119,6 +133,7 @@ async def generate_auto(
         "width": width,
         "height": height,
         "seed": seed,
+        "controlnet_strength": controlnet_strength,
     }
     runner_params = {
         **params,
