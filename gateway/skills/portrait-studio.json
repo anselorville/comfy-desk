@@ -1,27 +1,25 @@
 {
   "id": "portrait-studio",
   "name": "Portrait Studio",
-  "description": "Scenario-tuned portrait photography capability built on the SDXL text-to-image workflow. Demonstrates the skill plugin format: workflow + prompt template + defaults = one reusable capability.",
-  "workflow": "txt2img_sdxl",
-  "tags": ["portrait", "photography", "sdxl"],
+  "description": "Scenario-tuned portrait photography capability built on the Qwen-Image-2.1 text-to-image workflow. Demonstrates the skill plugin format: workflow + prompt template + defaults = one reusable capability.",
+  "workflow": "image_qwen21_t2i",
+  "tags": ["portrait", "photography", "qwen-image"],
   "prompt_template": "{subject}, professional portrait photography, 85mm lens, soft studio lighting, shallow depth of field, photorealistic",
   "negative_prompt_template": "{negative_prompt}, blurry, distorted face, low quality, watermark",
   "defaults": {
     "subject": "a young woman with curly hair",
     "negative_prompt": "",
-    "steps": 30,
-    "cfg": 6.5,
+    "steps": 25,
+    "cfg": 1.0,
     "width": 672,
     "height": 864,
-    "seed": -1,
-    "lora": "",
-    "lora_strength": 0.8
+    "seed": -1
   },
   "fields": [
     { "name": "subject", "type": "string", "label": "Subject", "default": "a young woman with curly hair" },
     { "name": "negative_prompt", "type": "string", "label": "Negative Prompt", "default": "" },
-    { "name": "steps", "type": "number", "label": "Steps", "default": 30 },
-    { "name": "cfg", "type": "number", "label": "CFG Scale", "default": 6.5 },
+    { "name": "steps", "type": "number", "label": "Steps", "default": 25 },
+    { "name": "cfg", "type": "number", "label": "CFG Scale", "default": 1.0 },
     { "name": "width", "type": "number", "label": "Width", "default": 672 },
     { "name": "height", "type": "number", "label": "Height", "default": 864 },
     { "name": "seed", "type": "number", "label": "Seed", "default": -1 }
