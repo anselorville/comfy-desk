@@ -35,6 +35,7 @@ from api.artifacts import router as artifacts_router
 from api.studio import router as studio_router
 from api.director import router as director_router
 from api.a2a import router as a2a_router
+from api.prompt_expert import router as prompt_expert_router
 from config import settings
 
 app = FastAPI(
@@ -67,6 +68,7 @@ app.include_router(artifacts_router, prefix="/api/v1", tags=["Artifacts"])
 app.include_router(studio_router, prefix="/api/v1", tags=["Studio"])
 app.include_router(director_router, prefix="/api/v1", tags=["Director"])
 app.include_router(a2a_router, prefix="/api/v1", tags=["A2A & MCP"])
+app.include_router(prompt_expert_router, prefix="/api/v1", tags=["Prompt Expert"])
 
 
 @app.get("/api/health", tags=["System"])

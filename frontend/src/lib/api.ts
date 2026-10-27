@@ -415,3 +415,54 @@ export async function fetchTravelScenarios(category: string = "all"): Promise<{
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// ── Prompt Expert APIs ────────────────────────────────────────────────────────
+
+export interface PromptExpertParams {
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg?: number;
+}
+
+export interface PromptExpertResponse {
+  status: "clarify" | "final";
+  session_id: string;
+  turn: number;
+  skill_id?: string;
+  positive_prompt?: string;
+  negative_prompt?: string;
+  params?: PromptExpertParams;
+  explanation_zh?: string;
+  followups_zh?: string[];
+  question_zh?: string;
+  intent_zh?: string;
+}
+
+export async function promptExpertChat(
+  message: string,
+  sessionId = ""
+): Promise<PromptExpertResponse> {
+  const res = await fetch(`${API_BASE}/prompt-expert/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, session_id: sessionId }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function resetPromptExpertSession(sessionId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/prompt-expert/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function fetchPromptExpertHealth(): Promise<{ llm_configured: boolean }> {
+  const res = await fetch(`${API_BASE}/prompt-expert/health`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

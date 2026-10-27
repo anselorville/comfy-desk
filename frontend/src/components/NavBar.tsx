@@ -7,6 +7,7 @@ import { fetchGpuTelemetry, cleanupGpu, GpuTelemetry } from "../lib/api";
 
 const NAV_LINKS = [
   { href: "/", label: "AI 助理", icon: "✦" },
+  { href: "/prompt-expert", label: "提示词专家", icon: "✍️" },
   { href: "/director", label: "导演分镜", icon: "🎬" },
   { href: "/studio", label: "快速工位", icon: "⚡" },
   { href: "/gallery", label: "媒体画廊", icon: "▦" },
