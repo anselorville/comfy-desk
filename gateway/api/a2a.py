@@ -21,6 +21,7 @@ class AgentChatRequest(BaseModel):
     mode: str = Field("auto", description="auto | image | video | storyboard")
     aspect_ratio: str = Field("16:9", description="1:1 | 16:9 | 9:16 | 4:3")
     preview: bool = Field(False, description="Fast preview mode")
+    video_model: str = Field("wan22_5b", description="wan22_5b (fast, 22GB-friendly) | minimax_h3 (max quality, slow)")
 
 
 class ToolCallRequest(BaseModel):
@@ -63,6 +64,7 @@ async def agent_chat(req: AgentChatRequest):
             mode=req.mode,
             aspect_ratio=req.aspect_ratio,
             preview=req.preview,
+            video_model=req.video_model,
         )
         return res
     except Exception as e:
@@ -89,7 +91,7 @@ async def get_mcp_manifest(request: Request):
             "chat": f"{base_url}/api/v1/a2a/chat",
             "telemetry": f"{base_url}/api/v1/system/gpu",
         },
-        "tools": [t["function"] for t in A2A_TOOLS],
+        "tools": [{"type": "function", "function": t} for t in A2A_TOOLS],
         "hardware": get_gpu_telemetry(),
         "client_config_example": {
             "mcpServers": {

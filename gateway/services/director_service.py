@@ -84,7 +84,7 @@ async def plan_storyboard(synopsis: str, style: str = "cinematic", num_shots: in
                 "- scene_description (string): descriptive scene explanation in Chinese\n"
                 "- prompt (string): ultra-detailed English visual prompt for video generation incorporating style and camera movement\n"
                 "- duration_sec (int): 5\n"
-                "- engine (string): 'video_minimax_h3_t2v' for shot 1, 'video_minimax_h3_i2v' for subsequent continuous shots\n"
+                "- engine (string): 'video_wan22_ti2v_5b' for shot 1, 'video_wan22_ti2v_5b_i2v' for subsequent continuous shots\n"
             )
             user_prompt = f"Story Synopsis: {synopsis}\nVisual Style: {style_info['label']}\nAspect Ratio: {aspect_ratio}\nTotal Shots: {num_shots}"
             
@@ -123,7 +123,7 @@ async def plan_storyboard(synopsis: str, style: str = "cinematic", num_shots: in
                         "scene_description": s.get("scene_description", ""),
                         "prompt": p,
                         "negative_prompt": "blurry, low quality, distorted, deformed, artifacts, noisy",
-                        "engine": s.get("engine", "video_minimax_h3_t2v" if idx == 0 else "video_minimax_h3_i2v"),
+                        "engine": s.get("engine", "video_wan22_ti2v_5b" if idx == 0 else "video_wan22_ti2v_5b_i2v"),
                         "status": "pending",
                         "progress": 0,
                         "keyframe_url": "",
@@ -151,7 +151,7 @@ async def plan_storyboard(synopsis: str, style: str = "cinematic", num_shots: in
                 "scene_description": f"画面第 {i+1} 段：{synopsis}，采用{cam['label']}运镜展现细节。",
                 "prompt": f"{style_info['prompt_prefix']}, cinematic shot {i+1} of {synopsis}, {cam['prompt_tag']}, master lighting, photorealistic textures",
                 "negative_prompt": "blurry, low quality, distorted, deformed, artifacts",
-                "engine": "video_minimax_h3_t2v" if i == 0 else "video_minimax_h3_i2v",
+                "engine": "video_wan22_ti2v_5b" if i == 0 else "video_wan22_ti2v_5b_i2v",
                 "status": "pending",
                 "progress": 0,
                 "keyframe_url": "",
@@ -252,7 +252,7 @@ async def render_storyboard_shot(sb_id: str, shot_id: str, preview: bool = False
         raise ValueError(f"Shot not found: {shot_id}")
 
     gpu_watchdog.touch()
-    wf_name = shot.get("engine", "video_minimax_h3_t2v")
+    wf_name = shot.get("engine", "video_wan22_ti2v_5b")
     aspect = sb.get("aspect_ratio", "16:9")
     
     # Map aspect ratio to standard resolution

@@ -93,7 +93,7 @@ A2A_TOOLS = [
                 "model": {
                     "type": "string",
                     "enum": ["minimax_h3", "wan22_5b"],
-                    "description": "Video model backend (default: minimax_h3).",
+                    "description": "Video model backend (default: wan22_5b, fast and 22GB-friendly; minimax_h3 for max quality, slow and needs offload).",
                 },
                 "aspect_ratio": {
                     "type": "string",
@@ -144,7 +144,7 @@ A2A_TOOLS = [
 ]
 
 
-def _dimension_for_aspect(aspect: str, is_video: bool = False, model: str = "minimax_h3") -> tuple[int, int]:
+def _dimension_for_aspect(aspect: str, is_video: bool = False, model: str = "wan22_5b") -> tuple[int, int]:
     if is_video:
         if model == "minimax_h3":
             return {"16:9": (1344, 768), "9:16": (768, 1344), "1:1": (1024, 1024)}.get(aspect, (1344, 768))
@@ -215,7 +215,7 @@ async def execute_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
     elif name == "generate_video":
         prompt = str(args.get("prompt") or "").strip()
-        model = str(args.get("model") or "minimax_h3")
+        model = str(args.get("model") or "wan22_5b")
         aspect = str(args.get("aspect_ratio") or "16:9")
         ref_img = str(args.get("reference_image") or "").strip()
         preview = bool(args.get("preview", False))
@@ -304,6 +304,7 @@ async def handle_agent_chat(
     mode: str = "auto",
     aspect_ratio: str = "16:9",
     preview: bool = False,
+    video_model: str = "wan22_5b",
 ) -> dict[str, Any]:
     """Conversational reasoning endpoint for Agent Copilot & A2A interaction."""
     gpu_watchdog.touch()
@@ -354,8 +355,18 @@ async def handle_agent_chat(
     # 2. Video Branch
     if is_video:
         is_i2v = bool(ref_image)
-        wf = "video_minimax_h3_i2v" if is_i2v else "video_minimax_h3_t2v"
-        w, h = _dimension_for_aspect(aspect_ratio, is_video=True, model="minimax_h3")
+        wants_minimax = any(
+            kw in lower_msg
+            for kw in ["minimax", "最高质量", "全质量", "高画质视频", "带声音", "原生音频", "原生立体声", "带配音"]
+        )
+        model = video_model if video_model in ("minimax_h3", "wan22_5b") else "wan22_5b"
+        if wants_minimax:
+            model = "minimax_h3"
+        if is_i2v:
+            wf = "video_minimax_h3_i2v" if model == "minimax_h3" else "video_wan22_ti2v_5b_i2v"
+        else:
+            wf = "video_minimax_h3_t2v" if model == "minimax_h3" else "video_wan22_ti2v_5b"
+        w, h = _dimension_for_aspect(aspect_ratio, is_video=True, model=model)
         if preview:
             w, h = (832, 480)
 
@@ -379,12 +390,18 @@ async def handle_agent_chat(
 
         task = await create_task(kind="generate_video", **params)
         asyncio.create_task(run_generation_task(task.id, wf, params))
-        
+
+        engine_label = (
+            "MiniMax H3 视频引擎（含原生立体声配音，最高质量，耗时较长）"
+            if model == "minimax_h3"
+            else "Wan2.2 TI2V 5B 视频引擎（22GB 显存友好，极速）"
+        )
         return {
-            "reply": f"🎬 已调动 MiniMax H3 视频生成引擎（含原生立体声配音），正在为您渲染 {aspect_ratio} 规格的视频...",
+            "reply": f"🎬 已调动 {engine_label}，正在为您渲染 {aspect_ratio} 规格的视频...",
             "kind": "video",
             "task_id": task.id,
             "workflow": wf,
+            "model": model,
             "status": "running",
             "poll_url": f"/api/v1/tasks/{task.id}",
             "stream_url": f"/api/v1/tasks/{task.id}/stream",
