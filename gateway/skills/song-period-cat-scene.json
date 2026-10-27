@@ -1,0 +1,48 @@
+{
+  "id": "song-period-cat-scene",
+  "name": "🐱 宋代美学·猫视角场景 (Song Aesthetic Cat-Scene)",
+  "description": "宋代低饱和美学的叙事场景文生图:猫视角低机位与上下分区构图、襦裙配色与发髻设定、庭院竹编猫舍、午后侧光。绑定本地 Qwen-Image-2.1 GGUF workflow,Qwen3-VL 编码器中文提示词直接可用。适用于古风多人场景、宠物视角、庭院生活题材。",
+  "workflow": "image_qwen21_t2i",
+  "tags": [
+    "image",
+    "t2i",
+    "qwen",
+    "gguf",
+    "song-dynasty",
+    "guofeng",
+    "cats",
+    "scene",
+    "9:16"
+  ],
+  "prompt_template": "{subject}。构图:{composition}。视角:{perspective}。人物:三种不同配色的宋代襦裙({palettes}),三种不同发髻,面部与服饰细节清晰、各不重复。动物:{cats}。环境:{environment}。光影:{lighting},低饱和宋代美学,中国画意摄影质感,细节丰富,杰作构图。",
+  "negative_prompt_template": "现代物件,现代服装,手表,眼镜,塑料感,3d渲染,卡通,动漫,过度饱和,水印,文字,重复的脸,相同的人,多余的人,手部畸形,多指,断指,肢体错误,解剖错误,模糊面部,裁切脚部,低画质",
+  "defaults": {
+    "subject": "庭院中三位宋代少女围着竹编猫舍逗猫",
+    "composition": "上下分区:上半部为猫仰视视角下的三张面部特写,下半部为竹笼外三人蹲身背影观猫",
+    "perspective": "猫视角,低机位仰拍,镜头贴近地面",
+    "palettes": "月白,淡青,浅粉",
+    "cats": "一只狸花猫,一只橘猫,一只白猫,毛发质感清晰",
+    "environment": "宋代庭院,竹编猫舍,木格栅,石板地,零星落花",
+    "lighting": "午后侧光,柔和暖调,轻纱透光",
+    "width": 832,
+    "height": 1472,
+    "steps": 25,
+    "cfg": 1.0,
+    "seed": -1
+  },
+  "fields": [
+    "subject",
+    "composition",
+    "perspective",
+    "palettes",
+    "cats",
+    "environment",
+    "lighting",
+    "width",
+    "height",
+    "steps",
+    "cfg",
+    "seed"
+  ],
+  "created_at": "2026-10-27T00:00:00+00:00"
+}
