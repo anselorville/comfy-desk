@@ -1,0 +1,58 @@
+{
+  "name": "Pose Reference (Z-Image + Fun ControlNet)",
+  "description": "以姿势参考图（如白膜姿势库 pose-db-01）控制人物姿态的文生图。ControlNet Union 提取参考图姿势结构，提示词控制人物/服装/场景，出图严格跟随参考姿势。NSFW 场景配合 image_qwen21_t2i 的无限制提示词风格使用。",
+  "type": "image",
+  "engine": "Z-Image Turbo BF16 + Fun ControlNet Union 2.1 lite",
+  "category": "pose-control",
+  "reference": "https://ai-pose-gallery.pages.dev/ (pose-ref/pose-db-01, NSFW 白膜姿势库)",
+  "fields": [
+    {
+      "name": "positive_prompt",
+      "type": "string",
+      "label": "Prompt",
+      "default": ""
+    },
+    {
+      "name": "image_filename",
+      "type": "string",
+      "label": "Pose Reference Image (ComfyUI input/ filename)",
+      "default": ""
+    },
+    {
+      "name": "controlnet_strength",
+      "type": "number",
+      "label": "Pose Strength",
+      "default": 0.8
+    },
+    {
+      "name": "steps",
+      "type": "number",
+      "label": "Steps",
+      "default": 8
+    },
+    {
+      "name": "cfg",
+      "type": "number",
+      "label": "CFG",
+      "default": 1.0
+    },
+    {
+      "name": "width",
+      "type": "number",
+      "label": "Width",
+      "default": 832
+    },
+    {
+      "name": "height",
+      "type": "number",
+      "label": "Height",
+      "default": 1109
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1
+    }
+  ]
+}
