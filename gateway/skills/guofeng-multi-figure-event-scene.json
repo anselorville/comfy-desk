@@ -15,13 +15,13 @@
     "9:16"
   ],
   "prompt_template": "{aspect}。Photorealistic fine-art scene: {subject_en}。\n【人物】{characters}\n【身份特征】{identity}:每人发型/发色/瞳色/脸型/服装主色/配饰各不相同,面部与服饰细节清晰、互不重复。\n【姿态-事件分工】{poses}\n【焦点元素】{focus}:细节真实,姿态自然,眼神灵动。\n【场景】{environment}\n【标志性光影】主光源:{lighting};人物被柔光照亮,展现自然曲线、微妙皮肤质感与柔和高光;环境保留大气阴影。\n【镜头与构图】{composition};50-85mm人像镜头,浅景深,主体锐利背景柔和虚化,真实摄影质感。\n【色彩调色】{palette};整体低饱和东方美学色,清雅不艳俗,诗意纪实感。\n【质感与细节】真实皮肤质感(毛孔细纹可见),布料自然褶皱与剪裁,环境材质纹理自然;微妙胶片颗粒,复古色调,丰富摄影景深。\n【情绪与氛围】{mood}",
-  "negative_prompt_template": "glass, modern objects, modern furniture, modern clothing, CGI appearance, waxy or overly glossy skin, plastic skin, over-smoothed, exaggerated anatomy, artificial posing, deformed hands, extra fingers, extra people, missing people, same face, same hairstyle, same costume, arms covering chest, revealing clothing, exposed skin, closed eyes, blurry face, cluttered backgrounds, harsh retouching, bright colors, oversaturated, cartoon, anime, illustration, 3d render, text, logos, watermarks, low resolution",
+  "negative_prompt_template": "glass, modern objects, modern furniture, modern clothing, CGI appearance, waxy or overly glossy skin, plastic skin, over-smoothed, exaggerated anatomy, artificial posing, deformed hands, extra fingers, extra people, missing people, same face, same hairstyle, same costume, arms covering chest, revealing clothing, exposed skin, closed eyes, blurry face, cluttered backgrounds, harsh retouching, flat chest, shapeless silhouette, baggy clothing hiding body shape, bright colors, oversaturated, cartoon, anime, illustration, 3d render, text, logos, watermarks, low resolution",
   "defaults": {
     "aspect": "9:16竖版,古装人物事件叙事图,超写实人像,8K超高清",
     "subject_en": "ancient Chinese figures in traditional architecture, elegant costumes, narrative moment",
-    "characters": "几位成年古装人物,气质与年龄明确,人数明确写出(如:三位20岁宋代仕女)",
-    "identity": "发型各异(如:双环髻、堕马髻、盘髻),服装主色各异(如:月白、淡青、浅粉)",
-    "poses": "每人一个明确动作并锁定身体姿态(如:中间女子蹲下前倾,左右女子直膝弯腰俯身),整体轮廓被侧光照亮",
+    "characters": "几位成年古装人物,气质与年龄明确,人数明确写出(如:三位20岁宋代仕女);需要身材曲线时写明:身形修长丰满,胸部饱满,腰身收束,s形曲线,curvaceous mature silhouette",
+    "identity": "发型各异(如:双环髻、堕马髻、盘髻),服装主色各异(如:月白、淡青、浅粉);服装注明贴身剪裁勾勒胸部轮廓与身体曲线(structured tailored fit)",
+    "poses": "每人一个明确动作并锁定身体姿态(如:中间女子蹲下前倾,左右女子直膝弯腰俯身);整体轮廓被侧光照亮;需要曲线时加:手臂自然下垂不遮挡胸口",
     "focus": "画面叙事焦点(动物/器物/事件对象)",
     "environment": "朝代准确的场景与道具材质(竹/木/石/陶,避免现代物件),时间与天气",
     "lighting": "明确方向的自然光(如:午后柔和阳光从侧面射入),竹影斑驳",
