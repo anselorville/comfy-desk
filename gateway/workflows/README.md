@@ -47,7 +47,7 @@
 - 关键参数：`image_filename`（姿势图，需先上传到 ComfyUI `input/`，gateway 的 `generation_runner` 传 `image_filename` 参数时自动上传）、`controlnet_strength`（0.35 默认；白膜线稿建议 0.3–0.6，强度过高会把白膜线稿本身复制到输出）
 - 姿势索引：`volumes/dataset/pose-ref/pose-db-01/index.json`（全中文名称/分类/文件映射）
 - 分辨率建议：跟随参考图比例 3:4 → 832×1109；9:16 → 832×1472
-- 版本管理：工作流 JSON 纳入 git（本仓库）；模型权重不进 git（体积），用 `.sha256` 旁车文件记录校验和
+- 版本管理：工作流 JSON 纳入 git（本仓库）；模型权重不进 git（体积），校验和记录在 `gateway/workflows/model-checksums.sha256`
 
 ## 修改约定
 
