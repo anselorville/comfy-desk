@@ -4,15 +4,19 @@ Prompt Expert Service — conversational image-prompt crafting assistant.
 Turns a layperson's rough idea into professional, stable, directly-usable
 text-to-image prompts by:
 1. Understanding the user's real intent through multi-turn conversation.
-2. Matching the request against registered skills (style recipes).
+2. Retrieving relevant examples from the prompt memory (long-term brain)
+   and matching registered skills (style recipes).
 3. Emitting final positive/negative prompt + generation params.
+4. Learning new examples the user teaches it (POST /prompt-expert/learn).
 
 Design notes:
 - Reuses the existing llm_adapter (OpenAI-compatible) for the conversational brain.
-- Skill knowledge is injected as context so the expert produces prompts
-  consistent with ComfyDesk's own workflows and style recipes.
+- Skill catalog + retrieved memory examples are injected as context so the
+  expert produces prompts consistent with proven styles, not invented ones.
 - Falls back to a deterministic skill-matching brain when the LLM is offline,
   so the feature always returns something usable.
+- Conversations stay in-memory (session-scoped); learned knowledge is
+  persistent (sqlite via services.prompt_memory).
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ from typing import Any
 
 from services import llm_adapter
 from services import skill_store
+from services import prompt_memory
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +45,29 @@ def _skill_catalog() -> str:
         if str(s.get("workflow", "")).startswith("image") or "t2i" in s.get("id", ""):
             tags = ",".join(s.get("tags", []))
             lines.append(f"- id={s['id']} name={s.get('name')} desc={s.get('description','')[:80]} tags={tags}")
-            # Inject the skill's prompt recipe so the expert can learn each
-            # scenario's proven prompt structure, not just its description.
-            tpl = (s.get("prompt_template") or "").strip()
-            if tpl:
-                lines.append(f"  配方结构: {tpl[:600]}")
-            neg = (s.get("negative_prompt_template") or "").strip()
-            if neg:
-                lines.append(f"  负向参考: {neg[:200]}")
     return "\n".join(lines)
 
 
-def _system_prompt() -> str:
+def _system_prompt(user_need: str) -> str:
+    """System prompt assembled per-turn: method contract + skill ids + retrieved examples."""
+    try:
+        examples = prompt_memory.search_examples(user_need, top_k=3)
+        memory_block = prompt_memory.render_memory_block(examples)
+    except Exception as e:
+        logger.warning("prompt memory retrieval failed: %s", e)
+        memory_block = ""
     return (
         "你是 ComfyDesk 的「图像生成提示词专家」(Prompt Expert)。\n"
         "你的任务:帮普通用户把模糊的想法,变成专业、细致、稳定、可直接使用的文生图提示词。\n\n"
         "工作方式:\n"
         "1. 先与用户简短沟通,明确创作意图:主体/场景、风格流派、构图与镜头、光线、色调氛围、画幅比例等。信息不足时提出不超过 2 个最关键的澄清问题。\n"
-        "2. 结合下方自有技能风格库,选定或融合一个最贴合的风格方向。\n"
+        "2. 结合下方技能风格库与已学示例,选定或融合一个最贴合的风格方向。改写时优先模仿已学示例的结构与用词——它们是经过实拍验证的。\n"
         "3. 当你已经了解足够信息时,输出最终成品。\n\n"
+        "改写方法论(硬性要求):\n"
+        "- 不要只堆砌 quality 形容词;把『自然』『高级』『电影感』翻译成可见的具体选择(材质名/色名/光向/焦段/机位)。\n"
+        "- 人数、角色标志物、关键身体特征必须显式锁定,并配对负向排除。\n"
+        "- 正向与负向一一对应:写了某个标志物,负向就排除 missing <该标志物>。\n"
+        "- 每轮只改一类变量,方便定位问题。\n\n"
         "输出格式(当你生成最终提示词时,严格输出如下 JSON,不要包裹代码块,不要额外散文):\n"
         "{\n"
         "  \"status\": \"final\",\n"
@@ -72,9 +81,90 @@ def _system_prompt() -> str:
         "当信息还不够时,输出: {\"status\": \"clarify\", \"question_zh\": \"你的澄清问题\", \"intent_zh\": \"你对用户当前需求的理解摘要\"}\n\n"
         "注意:提示词始终用英文书写;负向提示词要覆盖常见缺陷(模糊/畸变/多余手指/水印等);"
         "分辨率需匹配 22GB 显存的稳定范围(短边不超过 1024)。\n\n"
-        "自有技能风格库:\n"
+        "自有技能风格库(选择 skill_id 时参考):\n"
         + _skill_catalog()
+        + ("\n\n" + memory_block if memory_block else "")
     )
+
+
+_LEARN_SYSTEM = (
+    "你是提示词知识库的编目员。用户会给你一条优秀的文生图提示词(可能带上下文说明)。"
+    "把它拆解为结构化条目,严格输出如下 JSON,不要代码块:\n"
+    "{\n"
+    "  \"id\": \"小写字母数字连字符slug\",\n"
+    "  \"title_zh\": \"简短中文名(8-20字)\",\n"
+    "  \"category\": \"guofeng|portrait|cosplay|zine|scene|product|other 之一\",\n"
+    "  \"tags\": [\"检索标签5-10个,中英混合,含风格/主体/光线/构图关键词\"],\n"
+    "  \"positive\": \"完整正向提示词原文(如果是中文提示词请保留中文,不要翻译)\",\n"
+    "  \"negative\": \"负向提示词原文(没有则空串)\",\n"
+    "  \"slots\": {\"槽位名\": \"这条提示词在该槽位的写法,提炼为可迁移的公式\"},\n"
+    "  \"why_good\": \"这条提示词为什么好,1-3句,提炼可复用的经验\"\n"
+    "}\n"
+    "slots 是最重要的字段:不要描述这条提示词写了什么,要提炼『这类场景应该怎么写』的公式。"
+)
+
+
+async def learn_prompt(text: str, source: str = "user-taught") -> dict[str, Any]:
+    """Teach the expert a new good prompt: LLM decomposes it, memory stores it."""
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("text is required")
+    parsed: dict[str, Any] | None = None
+    if llm_adapter.configured():
+        try:
+            out = await llm_adapter.chat_completion(
+                [
+                    {"role": "system", "content": _LEARN_SYSTEM},
+                    {"role": "user", "content": f"待学习提示词:\n{text}"},
+                ],
+                [],
+            )
+            content = (out.get("content") or "").strip()
+            content = re.sub(r"^```(?:json)?", "", content).strip()
+            content = re.sub(r"```$", "", content).strip()
+            m = re.search(r"\{[\s\S]*\}", content)
+            if m:
+                obj = json.loads(m.group(0))
+                if isinstance(obj, dict) and obj.get("positive"):
+                    parsed = obj
+        except Exception as e:
+            logger.warning("prompt learn LLM call failed: %s", e)
+    if parsed is None:
+        # Offline fallback: store verbatim with crude tags.
+        parsed = {
+            "id": uuid.uuid4().hex[:10],
+            "title_zh": (text[:30] + ("…" if len(text) > 30 else "")),
+            "category": "other",
+            "tags": [w for w in re.findall(r"[\w\u4e00-\u9fff]{2,6}", text)][:8],
+            "positive": text,
+            "negative": "",
+            "slots": {},
+            "why_good": "",
+        }
+    parsed["source"] = source
+    if not str(parsed.get("why_good") or ""):
+        parsed["why_good"] = "用户提供的优秀示例"
+    saved = prompt_memory.add_example(
+        id=str(parsed.get("id") or uuid.uuid4().hex[:10]),
+        title_zh=str(parsed.get("title_zh") or "未命名示例"),
+        positive=str(parsed["positive"]),
+        negative=str(parsed.get("negative") or ""),
+        category=str(parsed.get("category") or "other"),
+        tags=[str(t) for t in (parsed.get("tags") or [])],
+        slots=parsed.get("slots") or {},
+        params=parsed.get("params") or {},
+        why_good=str(parsed.get("why_good") or ""),
+        source=source,
+    )
+    total = prompt_memory.count_examples()
+    return {
+        "status": "learned",
+        "example_id": saved.get("id"),
+        "deduped": saved.get("deduped", False),
+        "title_zh": parsed.get("title_zh"),
+        "tags": parsed.get("tags"),
+        "memory_size": total,
+    }
 
 
 def _fallback_brain(user_text: str, turn_count: int) -> dict[str, Any]:
@@ -162,7 +252,7 @@ async def expert_reply(session_id: str, user_text: str) -> dict[str, Any]:
     meta["turn"] = int(meta.get("turn", 0)) + 1
 
     history.append({"role": "user", "content": user_text})
-    messages = [{"role": "system", "content": _system_prompt()}] + history[-MAX_TURNS:]
+    messages = [{"role": "system", "content": _system_prompt(user_text)}] + history[-MAX_TURNS:]
 
     result: dict[str, Any] | None = None
     if llm_adapter.configured():

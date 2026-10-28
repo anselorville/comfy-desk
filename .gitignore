@@ -21,6 +21,7 @@ outputs/
 *.log
 gateway/studio.db*
 gateway/tasks.sqlite*
+gateway/prompt_memory.db*
 gateway/uploads/
 gateway/vapid_key.json
 gateway/certs/

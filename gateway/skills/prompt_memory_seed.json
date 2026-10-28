@@ -1,0 +1,125 @@
+[
+  {
+    "id": "song-ladies-viewing-cats",
+    "title_zh": "宋代仕女观猫图(多人事件叙事·上下分区构图)",
+    "category": "guofeng",
+    "tags": ["古风", "宋代", "仕女", "多人", "猫", "叙事场景", "9:16", "photorealistic", "事件"],
+    "positive": "9:16竖版,宋代仕女观猫图,超写实人像与古典猫咪融合,8K超高清。Photorealistic fine-art portrait: three adult ancient Chinese women in Song Dynasty observing cats, combining traditional architecture, elegant costumes, and playful feline companions。【人物】三位成年女性,20岁,宋代仕女,成熟优雅气质。身形修长丰满,胸部饱满,腰身收束流畅,体态兼具自然重量与曲线。【身份特征】发型:三人各不相同的发髻样式(双环髻、堕马髻、盘髻),自然碎发垂落,发间插有玉簪、珠花。发色:深黑偏棕,自然光泽。瞳色:深棕色。脸部特征:圆润鹅蛋脸,颧骨柔和,下颌线条流畅,真实皮肤质感。主色:襦裙分别为月白色、淡青色、浅粉色。服装:宋代襦裙,上身交领襦衣(structured tailored fit,优雅剪裁),下身长裙,腰系丝带。配饰:玉簪、珠花、简单耳坠。【姿态-观猫三式】中间女子:完全蹲下,双手自然垂落,身体前倾,眼睛闪亮,开心表情。左右两女子:膝盖不弯曲,只弯腰前倾,贴近中间女子,眼睛闪亮,开心表情。整体:三人手臂自然下垂,展现优雅的侧身轮廓,被柔和侧光照亮。【猫咪-宋代狸奴】狸花猫、橘猫、白猫(宋代常见猫咪品种)。位置:前方地面,被三人围观。细节:毛发真实,姿态自然,眼神灵动。【场景-宋代庭院猫舍】宋代庭院中的猫舍(竹制笼子,非玻璃),午后柔和阳光。竹制猫笼上下两层排列(宋代竹编工艺),笼子前面为竹编网格(非玻璃)。庭院背景:假山、竹林、石桌。木质地板或石板地面。安静雅致的宋代文人氛围。【标志性光影-庭院自然光】主光源:午后柔和阳光从侧面射入。人物光:三人被柔和侧光照亮,展现自然曲线、微妙皮肤质感与柔和高光。环境光:庭院有竹影斑驳,保留深邃的大气阴影。【镜头与构图】50-85mm人像镜头,真实摄影质感。构图上下2分割:上半部分猫咪视角拍摄三人脸部特写(开心表情);下半部分从猫笼外拍摄三人背影,展现优雅姿态。浅景深,人物与猫咪锐利,背景柔和虚化。视角:上半部分平视,下半部分略微俯拍。【色彩调色】主色调柔和自然色(月白、淡青、浅粉),强调色猫咪毛色(狸花、橘色、白色),背景色竹绿色、木色、石灰色。低饱和宋代美学色,清雅但不艳俗,诗意纪实感。【质感与细节】真实皮肤质感,可见毛孔、细纹。布料自然褶皱,structured tailored fit。猫咪毛发真实。竹笼编织纹理。整体真实摄影质感,微妙胶片颗粒,复古色调。【情绪与氛围】开心、惊喜、温柔、亲密。安静优雅温馨,诗意生活感。",
+    "negative": "glass, modern objects, modern furniture, modern clothing, CGI appearance, waxy or overly glossy skin, exaggerated anatomy, artificial posing, cluttered backgrounds, harsh retouching, text, logos, watermarks, cartoon, anime, illustration, plastic skin, over-smoothed, bright colors, extra people, deformed hands, extra fingers, closed eyes, blurry face, low resolution, same face, same hairstyle, same costume, flat chest, shapeless silhouette",
+    "slots": {
+      "总述": "画幅+题材+风格一句话锁定(9:16竖版+题材+photorealistic)",
+      "人物": "人数必须写死并要求『不多于该人数』,年龄气质明确",
+      "身份特征": "发型/主色/配饰三人各不相同,防同质化",
+      "姿态分工": "每人一个明确动作,锁定关节状态(直膝/蹲/弯腰)",
+      "场景": "朝代准确材质(竹编非玻璃),写明『非X』防穿越",
+      "光影": "有方向的自然光(侧光)+环境氛围光(竹影)",
+      "构图": "分区构图+每区独立机位与视角",
+      "调色": "主色/强调色/背景色全部点名具体色名",
+      "质感": "毛孔/布料褶皱/编织纹理/胶片颗粒"
+    },
+    "params": {"width": 832, "height": 1472, "steps": 25, "cfg": 1.0, "workflow": "image_qwen21_t2i"},
+    "why_good": "10段式结构(总述→人物→身份→姿态分工→焦点→场景→光影→构图→调色→氛围)让多人多焦点场景各元素互不冲突;人数/裙色/发髻/猫种全部显式锁定防漂移;负向词同时压制现代物件与同质化。已实拍验证:三女三猫三色全部正确。",
+    "source": "user-taught (2026-10-23, 实拍验证v2)"
+  },
+  {
+    "id": "pure-desire-seaside-micro-action",
+    "title_zh": "纯欲风·海边湿润生活感(微动作+交互焦点)",
+    "category": "portrait",
+    "tags": ["人像", "纯欲", "生活感", "海边", "微动作", "写真", "lifestyle", "photorealistic"],
+    "positive": "Clearly adult East Asian woman, fashionable, gentle and confident, standing beside wet reef and shallow water at dusk. She is looking down at a small seashell held in her palm, gaze accurately falling on the shell, clear fingertip contact. One leg bears the weight, the other knee is slightly bent, shoulders relaxed, natural restrained S-curve. Wet dark hair with a few windblown strands sticking to the cheek, natural makeup, realistic pores and small water droplets on skin and lashes. Covered fashion swimwear, matte fine-density fabric slightly darkened by water, realistic tension at the ties, normal coverage. Foreground blurred seaweed and wet reflections, middle ground the subject and foam, background low-saturation sea and horizon. Warm side sunlight from camera-left, faint cool ambient reflection in the shadows. 50mm equivalent, 3:4 vertical, head to mid-thigh, eye-level slightly from the side, focal plane locked on the near eye and the shell, shallow depth of field, low contrast, restrained saturation, subtle film grain, realistic fashion photography.",
+    "negative": "minor, childlike face, ambiguous age, nudity, exposed intimate areas, seductive exaggerated expression, plastic skin, over-smoothed face, fused fingers, extra fingers, floating props, failed fingertip contact, harsh flash, oversaturated, cgi render, watermark, text",
+    "slots": {
+      "成年身份": "clearly adult 开头,年龄信号明确",
+      "micro_action": "一个正在发生的动作(低头看掌心海螺),非摆拍",
+      "gaze_interaction": "视线有去处+手部接触面明确(fingertip contact)",
+      "姿态": "一条腿承重+另一膝微弯,肩髋不平行",
+      "材质": "领口形状+面料受力+覆盖边界,不写性感两个字",
+      "构图": "焦点=眼睛+道具双锁定,主体占比与裁切写明"
+    },
+    "params": {"workflow": "image_z_image_turbo", "steps": 8, "cfg": 1.0},
+    "why_good": "纯欲感=三组张力(亲近感+吸引力+克制感),来自『一个瞬间』而非『性感』关键词:微动作给眼神手势理由,生活感细节(湿发贴脸/水珠挂睫)稀释摆拍感,负面词压制幼态与露骨。源自 X @sdjn_wgc 方法论逆向。",
+    "source": "user-taught (docs/pure-desire-portrait-prompt-guide.md, 2026-09)"
+  },
+  {
+    "id": "cosplay-bunny-interior",
+    "title_zh": "时装/Cosplay·兔女郎室内写真(转弯顺露姿态公式)",
+    "category": "cosplay",
+    "tags": ["cosplay", "兔女郎", "室内", "人像", "姿态", "4:5", "fashion", "photorealistic"],
+    "positive": "Clearly adult woman, long straight black hair, thin-framed glasses, satin bunny-ear headband, elegant black strapless bodysuit with normal coverage, sheer black tights and glossy heels, standing in a bright modern living room. Torso turned three-quarter away from camera, face returned toward camera with a calm confident expression; slight head tilt; one softly bent knee; weight on the back leg; both hands have clear resting points, key fingers visible; waist and hips form a clean S-curve. White sofa and display shelf in the background with picture frames and greenery, background readable but not competing. Soft window light from the left with gentle bounce fill, clear shadow direction, satin and skin highlights separated. 35-50mm equivalent at hip height, 4:5 vertical, full body from head to shoes, shallow depth of field, realistic skin pores, mirrorless photography look.",
+    "negative": "minor, childlike face, ambiguous age, missing bunny ears, missing glasses, transparent to nudity, fishnet stockings, sneakers, anime face, CGI look, fused fingers, extra fingers, extra limbs, cropped feet, plastic skin, over-smoothed face, stiff mannequin pose, watermark, garbled text",
+    "slots": {
+      "角色锚点": "兔耳+眼镜+长直发+成年身份+高对比配色,标志物逐项点名",
+      "姿态公式": "转(torso 3/4 away)+弯(head tilt+bent knee)+顺(forearm flows into hand)+露(hands visible)",
+      "镜头": "35-50mm腰胯机位+4:5+完整保留头到鞋(验姿态必须看到脚)",
+      "材质": "satin/sheer/glossy 分开写反光,注明 normal coverage",
+      "负面": "逐项排除角色标志物缺失(missing bunny ears/glasses)"
+    },
+    "params": {"workflow": "image_z_image_turbo", "steps": 8, "cfg": 1.0},
+    "why_good": "姿态四入口『转弯顺露』各解决一个具体问题(剪影扁平/直棍/断折角/手指消失);负面词与正向标志物一一对应(写了兔耳就排 missing bunny ears);全身像强制 feet visible 才能诊断腿脚。源自 X @DDJCXX 帖逆向。",
+    "source": "user-taught (docs/portrait-role-prompt-guide.md, 2026-09-14)"
+  },
+  {
+    "id": "zine-minimal-poster",
+    "title_zh": "纸刊美学·极简海报(负空间+单色点缀)",
+    "category": "zine",
+    "tags": ["纸刊", "海报", "极简", "editorial", "负空间", "poster", "平面"],
+    "positive": "Minimalist zine-style poster of {subject}, large negative space, muted paper texture background, restrained composition with a single color accent, subtle print scan reproduction feel, fine film grain, off-white and ink palette, quiet editorial typography spacing, gallery print aesthetic, flat even lighting, high resolution",
+    "negative": "commercial ad, glossy magazine cover, chaotic collage, oversaturated colors, 3d render, busy background, cluttered composition, watermark, text artifacts, jpeg artifacts",
+    "slots": {
+      "语法": "负空间+纸纹+单色点缀+克制排版=纸刊感四件套",
+      "输入": "一句话主题即可,风格由模板语法承担"
+    },
+    "params": {"workflow": "image_z_image_turbo", "steps": 8, "cfg": 1.0},
+    "why_good": "纸刊感不是画出来的而是『留』出来的:大负空间+纸纹理+印刷扫描感让画面自动降饱和降复杂度;单色点缀是唯一强调。适合主题型需求(花/静物/建筑)。",
+    "source": "user-taught (X长文·6个开源视觉风格, 2026-09-04)"
+  },
+  {
+    "id": "editorial-photo-relic",
+    "title_zh": "纸刊美学·纸上留影版画(照片上下分区编辑风)",
+    "category": "zine",
+    "tags": ["照片", "编辑风", "版画", "editorial", "抽象", "图生图", "建筑"],
+    "positive": "Editorial two-panel layout: upper photo preserved as-is, lower panel abstract ink and geometric reconstruction of the same scene, clean negative space between panels, small restrained title typography, paper texture, muted editorial palette, print reproduction aesthetic, high resolution scan feel",
+    "negative": "glossy magazine, commercial ad, chaotic collage, oversaturated, altered upper photo, watermark, blurry",
+    "slots": {
+      "语法": "上半原片保留+下半抽象/版画重构+小标题+干净负空间",
+      "适用": "照片类输入(建筑/天际线/水面最佳)"
+    },
+    "params": {"workflow": "photo_cinematic_retouch", "steps": 12, "cfg": 1.5, "denoise": 0.62},
+    "why_good": "『upper photo preserved』是关键保护词,防止图生图把原片也改掉;下半区用同场景的抽象重构保持叙事连续;适合把普通照片变成杂志排版感。",
+    "source": "user-taught (X长文·6个开源视觉风格, 2026-09-04)"
+  },
+  {
+    "id": "guofeng-wongkarwai-portrait",
+    "title_zh": "古风电影人像·王家卫黑泽明语法(单人)",
+    "category": "guofeng",
+    "tags": ["古风", "人像", "电影感", "王家卫", "kurosawa", "汉服", "水汽", "cinematic"],
+    "positive": "ancient Chinese cinematic portrait, clearly adult woman in Hanfu silk with gold tassels, wet hair plastered softly across her cheek, water droplets on skin and lashes, emerging from dark reflective water, wong kar wai and kurosawa aesthetic, Tyndall god rays through incense smoke, rim light tracing her silhouette, low-key lighting, restrained color palette of black, antique gold, amber and ivory, shallow depth of field, anamorphic bokeh, medium format film grain, emotional restraint, poetic negative space, masterpiece composition",
+    "negative": "modern contemporary clothing, western architecture, busy cluttered background, oversaturated neon, smokey eye, gloss lips, two left hands, deformed fingers, identity drift, extra people, plastic skin, watermark, text",
+    "slots": {
+      "四元组": "导演锚点(wong kar wai+kurosawa)+材质(Hanfu silk/gold tassels)+光语法(≥2种:Tyndall/rim/low-key)+具体色名(black/antique gold/amber/ivory)",
+      "句式": "[主体动作]+ancient Chinese cinematic portrait+导演锚点+[材质+水汽]+[光语法≥2]+restrained palette of [色名]+anamorphic+film grain+emotional restraint",
+      "wet写法": "必须写 water droplets on skin and lashes,只写 wet hair 只会变深色不出水珠",
+      "禁止": "不给古风人物加现代妆词(smokey eye/gloss lips 会污染成西式glamour)"
+    },
+    "params": {"workflow": "image_z_image_turbo", "steps": 8, "cfg": 1.0, "ar": "9:16 用 720x1280 / 16:9 用 1280x720"},
+    "why_good": "两个导演名字锁定『低饱和+高对比+情绪留白』的曝光语言,比写 cinematic lighting 信息量大10倍;光语法必须≥2种否则只剩『穿汉服的人』;具体色名让模型在latent space命中对的色彩簇。有自检checklist可回炉。",
+    "source": "user-taught (skills/comfyui-prompt-stylist §8.5.1, 2026-09)"
+  },
+  {
+    "id": "street-snapshot-natural",
+    "title_zh": "自然街拍·生活感抓拍(白底/街景通用人像)",
+    "category": "portrait",
+    "tags": ["街拍", "自然", "抓拍", "人像", "生活感", "snapshot", "photorealistic"],
+    "positive": "Clearly adult woman in a realistic unposed street snapshot, caught mid-stride on a quiet city sidewalk, torso turned slightly away with face returning toward camera, one hand with a clear resting point on her bag strap, the other hand natural and visible. Natural adult facial features, soft everyday makeup, hair moving slightly in the breeze, realistic pores. Casual layered outfit with specific neckline and sleeve construction, fabric showing natural folds and contact shadows. Two or three environmental anchors (storefront, bicycle, street tree), clean background depth. Soft overcast daylight with gentle directional quality, neutral restrained palette, no harsh flash. 50mm equivalent, eye-level, 4:5, three-quarter body, intentional negative space, clean mirrorless snapshot, no glamour over-processing, subtle grain",
+    "negative": "minor, childlike face, stiff posed stance, glamour retouching, plastic skin, over-smoothed, fused fingers, extra fingers, deformed hands, distorted anatomy, oversaturated, harsh direct flash, tilted horizon, busy cluttered background, watermark, text",
+    "slots": {
+      "抓拍感": "mid-stride/caught+躯干微转脸回镜头+手有明确落点",
+      "环境锚点": "2-3个场景锚点道具即可,不堆砌",
+      "光": "阴天柔光但要保留方向性(overcast + directional quality)",
+      "收尾": "no glamour over-processing 压制网红磨皮感"
+    },
+    "params": {"workflow": "image_z_image_turbo", "steps": 8, "cfg": 1.0},
+    "why_good": "『自然/高级』翻译成可见选择:抓拍瞬间+织物受力+克制冷调,而不是写 natural style;手的落点和可见性是街拍不崩的关键;压制 glamour 处理保持生活感。",
+    "source": "user-taught (skills/comfyui-prompt-stylist §8.5, 2026-10)"
+  }
+]
